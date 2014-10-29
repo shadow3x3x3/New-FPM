@@ -57,12 +57,12 @@ import android.widget.Toast;
 
 import com.fpmusicplayer.ScreenObserver.ScreenStateListener;
 import com.service.MusicService;
-import com.service.MusicState;
 
 //TODO Begin
-@SuppressLint("InflateParams")
-public class MainActivity extends FragmentActivity implements Serializable,
-		MusicState {
+@SuppressLint({ "InflateParams", "DefaultLocale" })
+public class MainActivity extends FragmentActivity implements Serializable {
+	/* 引入全域變數 */
+	GlobalVariable globalVariable;
 	/* 宣告物件變數 */
 	private static MainActivity main = null;
 	private boolean isRestore = false;
@@ -83,7 +83,6 @@ public class MainActivity extends FragmentActivity implements Serializable,
 	private static ArrayList<MusicInfo> tempList;
 	private static ArrayList<MusicInfo> deleteList;
 	private static Handler handler = new Handler();
-	private static int musicCursor = 0;
 	private static int musicTempTime = 0;
 	private static int spnPosition = 0;
 	private static boolean isPlaying = false;
@@ -105,17 +104,18 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		main = this;
+
+		globalVariable = (GlobalVariable) getApplicationContext();
+
 		viewPager_initial();
 
-		if (isRestore == false) {
-			try {
-				musicInfos = MusicDatabase.readMusic(this);
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			}
-			isRestore = true;
+		try {
+			musicInfos = MusicDatabase.readMusic(this);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
+		Intent startIntent = new Intent(this, MusicService.class);
+		startService(startIntent);
 
 		playList = new ArrayList<MusicInfo>();
 		albumList = new ArrayList<MusicInfo>();
@@ -130,11 +130,9 @@ public class MainActivity extends FragmentActivity implements Serializable,
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		Intent intent = new Intent();
-		;
-		intent.putExtra("MusicState", EXIT);
-		intent.setClass(this, MusicService.class);
-		startService(intent);
+		// TODO cancelNotification
+		android.os.Process.killProcess(android.os.Process.myPid());
+
 	}
 
 	// Activity 關閉時保存資料
@@ -142,7 +140,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 	protected void onSaveInstanceState(Bundle outState) {
 		Log.d("Activity", "onSave");
 		super.onSaveInstanceState(outState);
-		outState.putInt("Cursor", musicCursor);
+		outState.putInt("Cursor", globalVariable.getMusicCursor());
 		outState.putBoolean("isPlaying", isPlaying);
 		outState.putBoolean("ispause", isPause);
 		outState.putBoolean("isRestore", isRestore);
@@ -150,7 +148,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 	}
 
 	// 執行序處理進度條
-	static Runnable updateThread = new Runnable() {
+	Runnable updateThread = new Runnable() {
 		public void run() {
 			// 獲得歌曲現在播放位置並設置成播放進度條的值
 			songTimeBar.setProgress(MusicService.mediaPlayer
@@ -226,7 +224,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 	// fragment_main - 播放頁面
 	// TODO main
-	public static class MainFragment extends Fragment {
+	public class MainFragment extends Fragment {
 		ImageButton imgBtn_next, imgBtn_pre;
 
 		public MainFragment() {
@@ -291,6 +289,8 @@ public class MainActivity extends FragmentActivity implements Serializable,
 			MusicService.mediaPlayer
 					.setOnCompletionListener(new OnCompletionListener() {
 
+						int musicCursor = globalVariable.getMusicCursor();
+
 						@Override
 						public void onCompletion(MediaPlayer mp) {
 							Log.d("Main",
@@ -325,6 +325,8 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 		// 基本控制
 		private Button.OnClickListener btnMusicListener = new Button.OnClickListener() {
+			int musicCursor = globalVariable.getMusicCursor();
+
 			@Override
 			public void onClick(View v) {
 				switch (v.getId()) {
@@ -363,16 +365,16 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 	// fragment_scanner - 音樂選取頁面
 	// TODO scanner
-	public static class ScannerFragment extends Fragment implements MusicState {
+	public class ScannerFragment extends Fragment {
 		private MusicAdapter mAdapter;
 		private MusicAdapter selectAdapter;
-		private MusicAdapter findAdapter; 
+		private MusicAdapter findAdapter;
 		private Spinner spnPrefer;
 		private EditText searchEdit;
 		private int selectPosition = 0;
 		private int countA = 0, countB = 0, flag = 0;
 		private int Pos = 0;
-		ModeCallback mCallback= new ModeCallback();
+		ModeCallback mCallback = new ModeCallback();
 
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -434,7 +436,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 						MusicInfo musicInfo = musicInfos.get(position);
 						// 判斷用哪個list來抓取位置
 						if (spnPosition == showPlaylist) { // 顯示播放清單時
-							musicCursor = position;
+							globalVariable.setMusicCursor(position);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
 							playMusic(getActivity());
@@ -471,15 +473,14 @@ public class MainActivity extends FragmentActivity implements Serializable,
 									}
 								}
 								// 顯示選到的album
-								selectAdapter = new MusicAdapter(
-										selectList);
+								selectAdapter = new MusicAdapter(selectList);
 								mlistView.setAdapter(selectAdapter);
 								isExpand = true;
 								Log.d("isExpand True", String.valueOf(isExpand));
 							} else { // 展開的情況下 依據選取的位置加到播放清單
 								Log.d("isExpand True", String.valueOf(isExpand));
 								musicInfo = selectList.get(position);
-								musicCursor = position;
+								globalVariable.setMusicCursor(position);
 								// 設置播放清單
 								playList.clear();
 								for (int listPointer = 0; listPointer < selectList
@@ -513,8 +514,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 									}
 								}
 								// 顯示選到的artist
-								selectAdapter = new MusicAdapter(
-										selectList);
+								selectAdapter = new MusicAdapter(selectList);
 								mlistView.setAdapter(selectAdapter);
 								isExpand = true;
 							} else { // 展開的情況下 將選到的歌手裡的所有歌存到selectList
@@ -551,7 +551,6 @@ public class MainActivity extends FragmentActivity implements Serializable,
 				}
 			});
 
-			
 			mlistView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
 			mlistView.setMultiChoiceModeListener(mCallback);
 			return view;
@@ -1044,7 +1043,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 	// fragment_context - 情境模式頁面
 	// TODO context
-	public static class ContextFragment extends Fragment {
+	public class ContextFragment extends Fragment {
 		private ListView cListView;
 		private LinearLayout setLayout;
 		private View quietView;
@@ -1068,7 +1067,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 		private int prtVolume;
 		private int curMode;
 		private boolean isIdleMode = false;
-		public static boolean phoneQuiet = false;
+		public boolean phoneQuiet = false;
 		private static final int noneMode = 0;
 		private static final int quietMode = 1;
 		private static final int commuterMode = 2;
@@ -1143,6 +1142,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 					gravityX = event.values[SensorManager.DATA_X];
 					gravityY = event.values[SensorManager.DATA_Y];
 					gravityZ = event.values[SensorManager.DATA_Z];
+
 					doWithGravityChange(gravityX, gravityY, gravityZ);
 				}
 			};
@@ -1366,7 +1366,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 		// 重力感應改變後的動作
 		private void doWithGravityChange(float gravityX, float gravityY,
 				float gravityZ) {
-
+			int musicCursor = globalVariable.getMusicCursor();
 			// 暫停與播放
 			if (gravityY > 4) {
 				Log.d("Context", "Up");
@@ -1385,7 +1385,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 			// 換首
 			if (gravityX > 3 && gravityZ > 0) {
 				Log.d("Context", "Left");
-				if (musicCursor > 0) { // 還沒到第一首
+				if (globalVariable.getMusicCursor() > 0) { // 還沒到第一首
 					musicCursor--;
 					playMusic(getActivity());
 
@@ -1437,11 +1437,11 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 	/* 全域方法 */// TODO 全域方法
 	// 播放及暫停方法
-	public static void playBtnAction(Activity activity) {
+	public void playBtnAction(Activity activity) {
 		// 第一次播放
 		if (isPlaying == false && isPause == false) {
 			// music list 是否還有歌曲
-			if (musicCursor <= playList.size()) {
+			if (globalVariable.getMusicCursor() <= playList.size()) {
 				playMusic(activity);
 			} else {
 				Toast.makeText(activity, "沒有音樂檔", Toast.LENGTH_SHORT).show();
@@ -1451,7 +1451,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 			Log.d("MAIN", "PAUSE");
 			imgBtn_play.setImageResource(R.drawable.player_play);
 			Intent intent = new Intent();
-			intent.putExtra("MusicState", PAUSE);
+			intent.putExtra("MusicState", GlobalVariable.PAUSE);
 			intent.setClass(activity, MusicService.class);
 			activity.startService(intent);
 			musicTempTime = MusicService.mediaPlayer.getCurrentPosition();
@@ -1468,15 +1468,16 @@ public class MainActivity extends FragmentActivity implements Serializable,
 	}
 
 	// 純播放方法
-	public static void playMusic(Activity activity) {
+	public void playMusic(Activity activity) {
 		imgBtn_play.setImageResource(R.drawable.player_pause);
 		Intent intent = new Intent();
-		intent.putExtra("PATH", playList.get(musicCursor).getPath());
-		intent.putExtra("MusicState", PLAY);
+		intent.putExtra("PATH", playList.get(globalVariable.getMusicCursor())
+				.getPath());
+		intent.putExtra("MusicState", GlobalVariable.PLAY);
 		intent.setClass(activity, MusicService.class);
 		activity.startService(intent);
 		// 設置main Fragment 狀態與外觀
-		setMainState(musicCursor);
+		setMainState(globalVariable.getMusicCursor());
 		handler.post(updateThread);
 		songTimeBar.setEnabled(true);
 		isPlaying = true;
@@ -1484,7 +1485,7 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 	// 設置Main元件狀態
 	@SuppressWarnings("deprecation")
-	public static void setMainState(int musicCursor) {
+	public void setMainState(int musicCursor) {
 		songTitle.setText(playList.get(musicCursor).getTitle());
 		songArtist.setText(playList.get(musicCursor).getArtist());
 		songAlbum.setText(playList.get(musicCursor).getAlbum());
@@ -1497,9 +1498,9 @@ public class MainActivity extends FragmentActivity implements Serializable,
 
 	/* 外部使用方法 */
 	// 得到目前音樂資訊
-	public static MusicInfo getPlayingNow() {
+	public MusicInfo getPlayingNow() {
 		MusicInfo musicInfo;
-		musicInfo = playList.get(musicCursor);
+		musicInfo = playList.get(globalVariable.getMusicCursor());
 		return musicInfo;
 	}
 

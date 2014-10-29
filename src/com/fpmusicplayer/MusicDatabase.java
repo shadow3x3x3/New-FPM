@@ -22,11 +22,11 @@ public class MusicDatabase {
 	private static final Uri albumCoverUri = Uri
 			.parse("content://media/external/audio/albumart");
 
-	MusicDatabase() {
+	public MusicDatabase() {
 	}
 
 	// 取得音樂檔案資訊
-	public static ArrayList<MusicInfo> readMusic(Activity mainActivity)
+	public ArrayList<MusicInfo> readMusic(Activity mainActivity)
 			throws FileNotFoundException {
 		if (isRead) {
 			return musicInfos;
@@ -75,7 +75,7 @@ public class MusicDatabase {
 	}// readMusic end
 
 	// 轉換毫秒
-	public static String formatTime(long time) {
+	public String formatTime(long time) {
 		String min = time / (1000 * 60) + "";
 		String sec = time % (1000 * 60) + "";
 		if (min.length() < 2) {
@@ -96,7 +96,8 @@ public class MusicDatabase {
 	}
 
 	// 藉由專輯id 找尋 專輯封面
-	public static Bitmap getAlbumCover(long albumID, Activity mainActivity) {
+	@SuppressWarnings("deprecation")
+	public Bitmap getAlbumCover(long albumID, Activity mainActivity) {
 		/* 定義區域變數 */
 		Bitmap bm = null;
 		FileDescriptor fd = null;

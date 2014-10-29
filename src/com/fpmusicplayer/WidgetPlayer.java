@@ -1,6 +1,5 @@
 package com.fpmusicplayer;
 
-import com.service.MusicState;
 
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
@@ -11,8 +10,9 @@ import android.content.Intent;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-public class WidgetPlayer extends AppWidgetProvider implements MusicState {
+public class WidgetPlayer extends AppWidgetProvider{
 	private MusicInfo musicInfo;
+	
 
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager,
