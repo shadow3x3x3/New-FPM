@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+    <ListView
+        android:id="@+id/musiclist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="120dp" >
+    </ListView>
+    
+    <EditText
+        android:id="@+id/find_edit"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        
+        android:hint="請輸入關鍵字" />
+
+    
+
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/find_edit"
+        android:layout_marginTop="0dp"
+        android:text="排序方式"
+        android:textColor="@android:color/holo_blue_light"
+        android:textSize="24sp" />
+
+    <Spinner
+        android:id="@+id/sortlist"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_alignParentLeft="true"
+        android:layout_marginTop="0dp"
+        android:layout_below="@+id/textView1"
+        android:background="#AAAAAA" />
+
+</RelativeLayout>

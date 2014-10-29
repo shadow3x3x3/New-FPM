@@ -1,0 +1,38 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/LinearLayout1"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.fcuproject.musicplayer.contextFragment" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <Switch
+            android:id="@+id/music_only_sw"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.52"
+            android:text="是否只保留媒體音量"
+            android:textOff="關"
+            android:textOn="開" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <Switch
+            android:id="@+id/sensor_control"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.52"
+            android:text="是否開啟控制"
+            android:textOff="關"
+            android:textOn="開" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <item 
+        android:id="@+id/action_allselect"
+        android:showAsAction="ifRoom|withText"
+        android:title="全選"/>
+    <item 
+        android:id="@+id/action_allcancle"
+        android:showAsAction="ifRoom|withText"
+        android:title="全部取消"/>
+    <item 
+        android:id="@+id/action_add"
+        android:showAsAction="ifRoom|withText"
+        android:title="加入播放清單"/>
+    
+        
+</menu>
