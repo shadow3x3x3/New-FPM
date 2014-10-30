@@ -1,7 +1,5 @@
 package com.fpmusicplayer;
 
-import java.io.FileNotFoundException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -60,41 +58,33 @@ import com.service.MusicService;
 
 //TODO Begin
 @SuppressLint({ "InflateParams", "DefaultLocale" })
-public class MainActivity extends FragmentActivity implements Serializable {
+public class MainActivity extends FragmentActivity implements MainActivity.MainFragment.OnHeadlineSelectedListener{
 	/* 引入全域變數 */
 	GlobalVariable globalVariable;
-	/* 宣告物件變數 */
-	private static MainActivity main = null;
-	private boolean isRestore = false;
+	/* 宣告物件變數 */	
 	private SectionsPagerAdapter mSectionsPagerAdapter;
-	private static ViewPager mViewPager;
-	private static TextView songTitle, songAlbum, songArtist;
-	private static TextView songTime;
-	private static ImageButton imgBtn_play;
-	private static SeekBar songTimeBar;
-	private static View vLayout;
-	private static BitmapDrawable background;
-	private static ListView mlistView;
-	private static ArrayList<MusicInfo> musicInfos;
-	private static ArrayList<MusicInfo> playList;
-	private static ArrayList<MusicInfo> albumList;
-	private static ArrayList<MusicInfo> selectList;
-	private static ArrayList<MusicInfo> artistList;
-	private static ArrayList<MusicInfo> tempList;
-	private static ArrayList<MusicInfo> deleteList;
-	private static Handler handler = new Handler();
-	private static int musicTempTime = 0;
-	private static int spnPosition = 0;
-	private static boolean isPlaying = false;
-	private static boolean isPause = false;
-	private static final int TAB_AMOUNT = 3;
-	private static boolean isExpand = false;
-	private static final int showPlaylist = 0;
-	private static final int sortWithName = 1;
-	private static final int sortWithAlbum = 2;
-	private static final int sortWithArtist = 3;
-	private static final int findList = 4;
-	private static final long serialVersionUID = 1L;
+	private ViewPager mViewPager;
+	private TextView songTitle, songAlbum, songArtist;
+	private TextView songTime;
+	private ImageButton imgBtn_play;
+	private SeekBar songTimeBar;
+	private View vLayout;
+	private BitmapDrawable background;
+	private ListView mlistView;
+	private ArrayList<MusicInfo> musicInfos;
+	private ArrayList<MusicInfo> playList;
+	private ArrayList<MusicInfo> albumList;
+	private ArrayList<MusicInfo> selectList;
+	private ArrayList<MusicInfo> artistList;
+	private ArrayList<MusicInfo> tempList;
+	private ArrayList<MusicInfo> deleteList;
+	private Handler handler = new Handler();
+	private int musicTempTime = 0;
+	private int spnPosition = 0;
+	private boolean isPlaying = false;
+	private boolean isPause = false;
+	private boolean isExpand = false;
+
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -106,14 +96,10 @@ public class MainActivity extends FragmentActivity implements Serializable {
 		setContentView(R.layout.activity_main);
 
 		globalVariable = (GlobalVariable) getApplicationContext();
+		globalVariable.setMainActivity(this);
 
 		viewPager_initial();
 
-		try {
-			musicInfos = MusicDatabase.readMusic(this);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
 		Intent startIntent = new Intent(this, MusicService.class);
 		startService(startIntent);
 
@@ -143,7 +129,6 @@ public class MainActivity extends FragmentActivity implements Serializable {
 		outState.putInt("Cursor", globalVariable.getMusicCursor());
 		outState.putBoolean("isPlaying", isPlaying);
 		outState.putBoolean("ispause", isPause);
-		outState.putBoolean("isRestore", isRestore);
 
 	}
 
@@ -187,6 +172,7 @@ public class MainActivity extends FragmentActivity implements Serializable {
 
 	// 頁面
 	public class SectionsPagerAdapter extends FragmentPagerAdapter {
+		private static final int TAB_AMOUNT = 3;
 
 		public SectionsPagerAdapter(FragmentManager fm) {
 			super(fm);
@@ -226,10 +212,16 @@ public class MainActivity extends FragmentActivity implements Serializable {
 	// TODO main
 	public class MainFragment extends Fragment {
 		ImageButton imgBtn_next, imgBtn_pre;
+		OnHeadlineSelectedListener mCallback; 
 
 		public MainFragment() {
 		}
-
+		
+		public interface OnHeadlineSelectedListener {  
+	        public void onArticleSelected(int position);  
+	    }
+		
+		
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
@@ -262,6 +254,20 @@ public class MainActivity extends FragmentActivity implements Serializable {
 
 			return view;
 		}
+		
+		@Override   
+	    public void onAttach(Activity activity) {   
+	        super.onAttach(activity);   
+	           
+	        // This makes sure that the container activity has implemented   
+	        // the callback interface. If not, it throws an exception   
+	        try {   
+	            mCallback = (OnHeadlineSelectedListener) activity;   
+	        } catch (ClassCastException e) {   
+	            throw new ClassCastException(activity.toString()   
+	                    + " must implement OnHeadlineSelectedListener");   
+	        }   
+	    }
 
 		// MainFragment 初始化
 		public void MainFragment_initail(View view) {
@@ -293,14 +299,6 @@ public class MainActivity extends FragmentActivity implements Serializable {
 
 						@Override
 						public void onCompletion(MediaPlayer mp) {
-							Log.d("Main",
-									"musicCursor:"
-											+ Integer.toString(musicCursor));
-							Log.d("Main",
-									"playList:"
-											+ Integer.toString(playList.size()));
-							Log.d("Main", "======================");
-
 							// 是否為最後一首
 							if (musicCursor < playList.size() - 1) { // 還沒到最後一首
 								musicCursor++;
@@ -374,6 +372,11 @@ public class MainActivity extends FragmentActivity implements Serializable {
 		private int selectPosition = 0;
 		private int countA = 0, countB = 0, flag = 0;
 		private int Pos = 0;
+		private static final int showPlaylist = 0;
+		private static final int sortWithName = 1;
+		private static final int sortWithAlbum = 2;
+		private static final int sortWithArtist = 3;
+		private static final int findList = 4;
 		ModeCallback mCallback = new ModeCallback();
 
 		@Override
@@ -427,7 +430,7 @@ public class MainActivity extends FragmentActivity implements Serializable {
 
 			// 點擊list view項目的動作
 			mlistView.setOnItemClickListener(new OnItemClickListener() {
-
+				
 				@Override
 				public void onItemClick(AdapterView<?> parent, View view,
 						int position, long id) {
@@ -556,6 +559,8 @@ public class MainActivity extends FragmentActivity implements Serializable {
 			return view;
 
 		}
+		
+		
 
 		private class ModeCallback implements ListView.MultiChoiceModeListener {
 
@@ -1017,13 +1022,13 @@ public class MainActivity extends FragmentActivity implements Serializable {
 			if (isExpand == true) {
 				switch (spnPosition) {
 
-				case sortWithAlbum:
+				case MainActivity.ScannerFragment.sortWithAlbum:
 					AlbumAdapter alAdapter = new AlbumAdapter(albumList);
 					mlistView.setAdapter(alAdapter);
 					isExpand = false;
 					break;
 
-				case sortWithArtist:
+				case MainActivity.ScannerFragment.sortWithArtist:
 					ArtistAdapter arAdapter = new ArtistAdapter(artistList);
 					mlistView.setAdapter(arAdapter);
 					isExpand = false;

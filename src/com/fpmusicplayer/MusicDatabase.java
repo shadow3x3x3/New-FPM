@@ -17,8 +17,8 @@ import android.provider.MediaStore;
  * Created by Administrator on 2014/7/4.
  */
 public class MusicDatabase {
-	private static boolean isRead = false;
-	private static ArrayList<MusicInfo> musicInfos = new ArrayList<MusicInfo>();
+	private boolean isRead = false;
+	private ArrayList<MusicInfo> musicInfos = new ArrayList<MusicInfo>();
 	private static final Uri albumCoverUri = Uri
 			.parse("content://media/external/audio/albumart");
 

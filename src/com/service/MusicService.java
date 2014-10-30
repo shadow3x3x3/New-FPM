@@ -1,5 +1,7 @@
 package com.service;
 
+import java.io.FileNotFoundException;
+
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -19,7 +21,7 @@ import com.fpmusicplayer.R;
 public class MusicService extends Service {
 
 	/* 宣告類別物件 */
-	public static MediaPlayer mediaPlayer;
+	private MediaPlayer mediaPlayer;
 	private MusicDatabase mDatabase;
 	private String PATH;
 	private int musicState;
@@ -35,7 +37,11 @@ public class MusicService extends Service {
 	@Override
 	public void onCreate() {
 		mDatabase = new MusicDatabase();
-		mDatabase.readMusic();
+		try {
+			mDatabase.readMusic(globalVariable.getActivity());
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 		mediaPlayer = new MediaPlayer();
 		globalVariable = (GlobalVariable) getApplicationContext();
 
