@@ -1,6 +1,7 @@
 package com.service;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -19,15 +20,16 @@ import com.fpmusicplayer.MusicInfo;
 import com.fpmusicplayer.R;
 
 public class MusicService extends Service {
-
+	/* 引入全域變數 */
+	GlobalVariable globalVariable;
 	/* 宣告類別物件 */
+	private ArrayList<MusicInfo> allMusicList;
 	private MediaPlayer mediaPlayer;
 	private MusicDatabase mDatabase;
 	private String PATH;
-	private int musicState;
 	private Notification notification;
 	private NotificationManager notificationManager;
-	GlobalVariable globalVariable;
+	private int musicState;
 
 	@Override
 	public IBinder onBind(Intent arg0) {
@@ -36,20 +38,20 @@ public class MusicService extends Service {
 
 	@Override
 	public void onCreate() {
+		globalVariable = (GlobalVariable) getApplicationContext();
 		mDatabase = new MusicDatabase();
 		try {
-			mDatabase.readMusic(globalVariable.getActivity());
+			allMusicList = mDatabase.readMusic(globalVariable.getActivity());
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
+		globalVariable.setAllMusicList(allMusicList);
+		globalVariable.addIntoPlayList(allMusicList.get(0));
 		mediaPlayer = new MediaPlayer();
-		globalVariable = (GlobalVariable) getApplicationContext();
-
 	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-
 		// 媒體方法
 		if (intent != null) {
 			musicState = intent.getIntExtra("MusicState", GlobalVariable.PLAY);
@@ -65,16 +67,14 @@ public class MusicService extends Service {
 				intentBroadcast
 						.setAction("android.appwidget.action.APPWIDGET_UPDATE");
 				sendBroadcast(intentBroadcast);
-				sendNotification();
+				sendNotification(globalVariable);
 				play(0);
 			}
 			break;
 		case GlobalVariable.PAUSE:
 			pause();
 			break;
-
 		}
-
 		return super.onStartCommand(intent, flags, startId);
 	}
 
@@ -95,7 +95,10 @@ public class MusicService extends Service {
 		Log.d("service", "pause");
 		mediaPlayer.pause();
 		musicState = GlobalVariable.PAUSE;
-
+	}
+	
+	private void getCurPlay(){
+		globalVariable.getPlayingNow();
 	}
 
 	// 準備監聽
@@ -120,9 +123,9 @@ public class MusicService extends Service {
 	}
 
 	// 發送通知
-	public void sendNotification() {
+	public void sendNotification(GlobalVariable globalVariable) {
 		// 獲取對象
-		MusicInfo musicInfo = MainActivity.getPlayingNow();
+		MusicInfo musicInfo = globalVariable.getPlayingNow();
 		notificationManager = (NotificationManager) this
 				.getSystemService(Service.NOTIFICATION_SERVICE);
 
@@ -139,9 +142,9 @@ public class MusicService extends Service {
 				.setContentIntent(pendingIntent).setAutoCancel(false);
 
 		notification = new Notification();
-		notification.icon = R.drawable.ic_launcher; // 設置圖標，公用圖標
+		notification.icon 		= R.drawable.ic_launcher; // 設置圖標，公用圖標
 		notification.tickerText = musicInfo.getTitle();
-		notification.flags = Notification.FLAG_ONGOING_EVENT;
+		notification.flags 		= Notification.FLAG_ONGOING_EVENT;
 
 		notificationManager.notify(R.drawable.ic_launcher, builder.build());
 

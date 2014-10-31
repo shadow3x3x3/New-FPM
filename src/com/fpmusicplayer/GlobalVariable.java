@@ -9,7 +9,7 @@ public class GlobalVariable extends Application {
 	private Activity mActivity;
 
 	/* 歌曲序列 */
-	private ArrayList<MusicInfo> musicInfos;
+	private ArrayList<MusicInfo> allMusicList;
 	private ArrayList<MusicInfo> playList;
 	private ArrayList<MusicInfo> albumList;
 	private ArrayList<MusicInfo> selectList;
@@ -18,20 +18,20 @@ public class GlobalVariable extends Application {
 	private ArrayList<MusicInfo> deleteList;
 
 	/* 指標 */
-	private int musicCursor = 0;
-	public int musicTempTime = 0;
-	public int spnPosition = 0;
+	private int musicCursor 	= 0;
+	private int musicTempTime 	= 0;
+	private int spnPosition 	= 0;
 
 	/* 布林值 */
-	public boolean isPlaying = false;
-	public boolean isPause = false;
-	public boolean isExpand = false;
+	private boolean isPlaying	= false;
+	private boolean isPause 	= false;
+	private boolean isExpand 	= false;
 
 	/** 固定參數 **/
 	/* 音樂狀態 */
-	public static final int IDLE = 0;
-	public static final int PLAY = 1;
-	public static final int PAUSE = 2;
+	public static final int IDLE 	= 0;
+	public static final int PLAY 	= 1;
+	public static final int PAUSE 	= 2;
 
 	/* Getter */
 	public Activity getActivity() {
@@ -51,12 +51,12 @@ public class GlobalVariable extends Application {
 	}
 
 	/* Setter */
+	public void setAllMusicList(ArrayList<MusicInfo> allMusicList) {
+		this.allMusicList = allMusicList;
+	}
+	
 	public void setMainActivity(MainActivity mainActivity) {
 		this.mActivity = mainActivity;
-	}
-
-	public void setMusicCursor(int musicCursor) {
-		this.musicCursor = musicCursor;
 	}
 
 	public void setMusicTempTime(int musicTempTime) {
@@ -67,6 +67,25 @@ public class GlobalVariable extends Application {
 		this.spnPosition = spnPosition;
 	}
 	
+	/* method */
+	public void addIntoPlayList(MusicInfo musicInfo) {
+		playList.add(musicInfo);
+	}
 	
-
+	public void clearPlayList() {
+		playList.clear();
+	}	
+	
+	public void AddMusicCursor() {
+		musicCursor++;
+	}
+	
+	public void resetMusicCursor() {
+		musicCursor = 0;
+	}
+	
+	// 得到目前音樂資訊
+	public MusicInfo getPlayingNow() {
+		return playList.get(musicCursor);
+	}
 }

@@ -58,10 +58,10 @@ import com.service.MusicService;
 
 //TODO Begin
 @SuppressLint({ "InflateParams", "DefaultLocale" })
-public class MainActivity extends FragmentActivity implements MainActivity.MainFragment.OnHeadlineSelectedListener{
+public class MainActivity extends FragmentActivity {
 	/* 引入全域變數 */
 	GlobalVariable globalVariable;
-	/* 宣告物件變數 */	
+	/* 宣告物件變數 */
 	private SectionsPagerAdapter mSectionsPagerAdapter;
 	private ViewPager mViewPager;
 	private TextView songTitle, songAlbum, songArtist;
@@ -85,7 +85,6 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 	private boolean isPause = false;
 	private boolean isExpand = false;
 
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// 設置窗口無標題
@@ -103,12 +102,12 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 		Intent startIntent = new Intent(this, MusicService.class);
 		startService(startIntent);
 
-		playList = new ArrayList<MusicInfo>();
-		albumList = new ArrayList<MusicInfo>();
-		artistList = new ArrayList<MusicInfo>();
-		selectList = new ArrayList<MusicInfo>();
-		tempList = new ArrayList<MusicInfo>();
-		deleteList = new ArrayList<MusicInfo>();
+		playList 	= new ArrayList<MusicInfo>();
+		albumList 	= new ArrayList<MusicInfo>();
+		artistList 	= new ArrayList<MusicInfo>();
+		selectList 	= new ArrayList<MusicInfo>();
+		tempList 	= new ArrayList<MusicInfo>();
+		deleteList 	= new ArrayList<MusicInfo>();
 
 	}
 
@@ -201,7 +200,6 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 		public int getCount() {
 			return TAB_AMOUNT;
 		}
-
 	}
 
 	/**
@@ -212,23 +210,16 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 	// TODO main
 	public class MainFragment extends Fragment {
 		ImageButton imgBtn_next, imgBtn_pre;
-		OnHeadlineSelectedListener mCallback; 
 
-		public MainFragment() {
+		MainFragment() {
 		}
-		
-		public interface OnHeadlineSelectedListener {  
-	        public void onArticleSelected(int position);  
-	    }
-		
-		
+
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
 			View view = inflater.inflate(R.layout.fragment_main, null);
 
 			MainFragment_initail(view);
-
 			setMainState(0);
 
 			// 播放條監聽
@@ -254,34 +245,19 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 
 			return view;
 		}
-		
-		@Override   
-	    public void onAttach(Activity activity) {   
-	        super.onAttach(activity);   
-	           
-	        // This makes sure that the container activity has implemented   
-	        // the callback interface. If not, it throws an exception   
-	        try {   
-	            mCallback = (OnHeadlineSelectedListener) activity;   
-	        } catch (ClassCastException e) {   
-	            throw new ClassCastException(activity.toString()   
-	                    + " must implement OnHeadlineSelectedListener");   
-	        }   
-	    }
 
 		// MainFragment 初始化
 		public void MainFragment_initail(View view) {
 			/* Build */
-			songTitle = (TextView) view.findViewById(R.id.songTitle);
-			songAlbum = (TextView) view.findViewById(R.id.songAlbum);
-			songArtist = (TextView) view.findViewById(R.id.songArtist);
-			songTime = (TextView) view.findViewById(R.id.songTime);
+			songTitle 	= (TextView) 	view.findViewById(R.id.songTitle);
+			songAlbum 	= (TextView) 	view.findViewById(R.id.songAlbum);
+			songArtist 	= (TextView) 	view.findViewById(R.id.songArtist);
+			songTime 	= (TextView) 	view.findViewById(R.id.songTime);
 			imgBtn_play = (ImageButton) view.findViewById(R.id.imgBtn_add);
 			imgBtn_next = (ImageButton) view.findViewById(R.id.imgBtn_next);
-			imgBtn_pre = (ImageButton) view.findViewById(R.id.imgBtn_pre);
-
-			songTimeBar = (SeekBar) view.findViewById(R.id.songTimeBar);
-			vLayout = view.findViewById(R.id.MusicLayout);
+			imgBtn_pre 	= (ImageButton) view.findViewById(R.id.imgBtn_pre);
+			songTimeBar = (SeekBar) 	view.findViewById(R.id.songTimeBar);
+			vLayout 	= 				view.findViewById(R.id.MusicLayout);
 			/* Execution */
 			imgBtn_play.setOnClickListener(btnMusicListener);
 			imgBtn_next.setOnClickListener(btnMusicListener);
@@ -312,19 +288,14 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 								songTimeBar.setEnabled(false);
 								isPause = false;
 								isPlaying = false;
-
 							}
-
 						}
-
 					});
-
 		}
 
 		// 基本控制
 		private Button.OnClickListener btnMusicListener = new Button.OnClickListener() {
 			int musicCursor = globalVariable.getMusicCursor();
-
 			@Override
 			public void onClick(View v) {
 				switch (v.getId()) {
@@ -430,7 +401,7 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 
 			// 點擊list view項目的動作
 			mlistView.setOnItemClickListener(new OnItemClickListener() {
-				
+
 				@Override
 				public void onItemClick(AdapterView<?> parent, View view,
 						int position, long id) {
@@ -549,7 +520,6 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 									.setCurrentItem(1);
 							playMusic(getActivity());
 						}
-
 					}
 				}
 			});
@@ -559,8 +529,6 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 			return view;
 
 		}
-		
-		
 
 		private class ModeCallback implements ListView.MultiChoiceModeListener {
 
@@ -1156,17 +1124,18 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 		}
 
 		private void ContextFragment_initail(LayoutInflater inflater, View view) {
-			setLayout = (LinearLayout) view.findViewById(R.id.modeSetLayout);
-			quietView = inflater.inflate(R.layout.quiet_layout, null);
-			commuterView = inflater.inflate(R.layout.commuter_layout, null);
-			longHaulView = inflater.inflate(R.layout.longhaul_layout, null);
-			customView = inflater.inflate(R.layout.custom_layout, null);
+			setLayout 		= (LinearLayout)view.findViewById (R.id.modeSetLayout);
+			quietView 		= 				inflater.inflate  (R.layout.quiet_layout, null);
+			commuterView 	= 				inflater.inflate  (R.layout.commuter_layout, null);
+			longHaulView 	= 				inflater.inflate  (R.layout.longhaul_layout, null);
+			customView 		= 				inflater.inflate  (R.layout.custom_layout, null);
 
 			// 服務類build
-			audioManager = (AudioManager) getActivity().getSystemService(
+			audioManager 	= (AudioManager) getActivity().getSystemService(
 					AUDIO_SERVICE);
-			cSensorManager = (SensorManager) getActivity().getSystemService(
+			cSensorManager 	= (SensorManager) getActivity().getSystemService(
 					SENSOR_SERVICE);
+			
 			if (cSensorManager == null) {
 				Log.d("Context", "No Sensor");
 			}
@@ -1175,24 +1144,23 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 
 			/* 元件build */// TODO build in fragment
 			// quite 頁面
-			mediaOnlySw = (Switch) quietView.findViewById(R.id.music_only_sw);
-			sensorCtrSw = (Switch) quietView.findViewById(R.id.sensor_control);
+			mediaOnlySw = (Switch) quietView.findViewById (R.id.music_only_sw);
+			sensorCtrSw = (Switch) quietView.findViewById (R.id.sensor_control);
 
 			// commuter 頁面
-			sTimeEditText = (EditText) commuterView
+			sTimeEditText 	= (EditText) commuterView
 					.findViewById(R.id.editText_suiteTime);
-			crtSuiteBtn = (Button) commuterView
+			crtSuiteBtn 	= (Button) commuterView
 					.findViewById(R.id.btn_creatSuite);
 
 			// longHaul 頁面
-			earPrtSw = (Switch) longHaulView.findViewById(R.id.sw_earPrtd);
-			prtTimEditText = (EditText) longHaulView
+			earPrtSw 		= (Switch) longHaulView.findViewById(R.id.sw_earPrtd);
+			prtTimEditText 	= (EditText) longHaulView
 					.findViewById(R.id.editText_prtdTime);
 			prtTimEditText.setEnabled(false);
 			try {
 				mScreenObserver = new ScreenObserver(getActivity());
 			} catch (NoSuchMethodException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
@@ -1502,12 +1470,7 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 	}
 
 	/* 外部使用方法 */
-	// 得到目前音樂資訊
-	public MusicInfo getPlayingNow() {
-		MusicInfo musicInfo;
-		musicInfo = playList.get(globalVariable.getMusicCursor());
-		return musicInfo;
-	}
+	
 
 	// 得到目前得到目前是否能加入清單
 	public static Boolean canAdd() {
@@ -1527,11 +1490,6 @@ public class MainActivity extends FragmentActivity implements MainActivity.MainF
 			playList.add(selectList.get(position));
 		}
 		Toast.makeText(view.getContext(), "已加入播放清單", Toast.LENGTH_SHORT).show();
-	}
-
-	// 得到這個Activity
-	public static MainActivity setActivity() {
-		return main;
 	}
 
 } // Activity End

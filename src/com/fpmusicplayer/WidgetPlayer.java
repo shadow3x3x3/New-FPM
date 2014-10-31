@@ -54,7 +54,7 @@ public class WidgetPlayer extends AppWidgetProvider{
 		Log.d("Widget", "updateWidget Start");
 		RemoteViews widgetViews = new RemoteViews(context.getPackageName(),
 				R.layout.player_widget);
-		musicInfo = MainActivity.getPlayingNow();
+		musicInfo = GlobalVariable.getPlayingNow();
 		widgetViews.setTextViewText(R.id.W_songTitle, musicInfo.getTitle());
 		widgetViews.setTextViewText(R.id.W_songAlbum, musicInfo.getAlbum());
 		Log.d("Widget", "Title:" + musicInfo.getTitle());
