@@ -8,7 +8,10 @@ import java.util.Random;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -56,7 +59,6 @@ import android.widget.Toast;
 import com.fpmusicplayer.ScreenObserver.ScreenStateListener;
 import com.service.MusicService;
 
-//TODO Begin
 @SuppressLint({ "InflateParams", "DefaultLocale" })
 public class MainActivity extends FragmentActivity {
 	/* 引入全域變數 */
@@ -115,9 +117,23 @@ public class MainActivity extends FragmentActivity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		// TODO cancelNotification
+		unregisterReceiver(broadcastReceiver);
 		android.os.Process.killProcess(android.os.Process.myPid());
-
+	}
+	
+	// TODO filter
+	@Override
+	protected void onResume(){
+		super.onResume();
+		IntentFilter filter = new IntentFilter();  
+        filter.addAction("seekbarmaxprogress");  
+        filter.addAction("seekbarprogress");  
+        filter.addAction("playNextSong");  
+        filter.addAction("pause");  
+        filter.addAction("setplay");  
+        filter.addAction("stoploop");  
+        filter.addAction("startloop");  
+        registerReceiver(broadcastReceiver, filter);
 	}
 
 	// Activity 關閉時保存資料
@@ -139,9 +155,6 @@ public class MainActivity extends FragmentActivity {
 					.getCurrentPosition());
 			// 獲得播放時間並更改text view
 			musicTempTime = MusicService.mediaPlayer.getCurrentPosition();
-			songTime.setText(MusicDatabase
-					.formatTime((long) MusicService.mediaPlayer
-							.getCurrentPosition()));
 			handler.postDelayed(updateThread, 100);
 		}
 	};
@@ -267,30 +280,7 @@ public class MainActivity extends FragmentActivity {
 			songTimeBar.setEnabled(false);
 			songTimeBar.setMax((int) playList.get(0).getDuration());
 
-			// 播放完成監聽
-			MusicService.mediaPlayer
-					.setOnCompletionListener(new OnCompletionListener() {
-
-						int musicCursor = globalVariable.getMusicCursor();
-
-						@Override
-						public void onCompletion(MediaPlayer mp) {
-							// 是否為最後一首
-							if (musicCursor < playList.size() - 1) { // 還沒到最後一首
-								musicCursor++;
-								playMusic(getActivity());
-
-							} else if (musicCursor == playList.size() - 1) { // 最後一首的情形
-								imgBtn_play
-										.setImageResource(R.drawable.player_play);
-								handler.removeCallbacks(updateThread);
-								songTimeBar.setProgress(0);
-								songTimeBar.setEnabled(false);
-								isPause = false;
-								isPlaying = false;
-							}
-						}
-					});
+			
 		}
 
 		// 基本控制
@@ -301,27 +291,24 @@ public class MainActivity extends FragmentActivity {
 				switch (v.getId()) {
 				// 播放暫停鍵
 				case R.id.imgBtn_add: {
+					setMainState(globalVariable.getMusicCursor());
 					playBtnAction(getActivity());
 					break;
 				}
+				// 前一首鍵
 				case R.id.imgBtn_pre: {
-					if (musicCursor > 0) { // 還沒到第一首
-						musicCursor--;
-						playMusic(getActivity());
-					} else {
-						Toast.makeText(getActivity(), "沒有上一首",
-								Toast.LENGTH_SHORT).show();
-					}
+					Intent intent = new Intent();
+					intent.putExtra("MusicState", GlobalVariable.PRE);
+					intent.setClass(getActivity(), MusicService.class);
+					startService(intent);
 					break;
 				}
+				// 下一首鍵
 				case R.id.imgBtn_next: {
-					if (musicCursor < playList.size() - 1) { // 還沒到最後一首
-						musicCursor++;
-						playMusic(getActivity());
-					} else {
-						Toast.makeText(getActivity(), "沒有下一首",
-								Toast.LENGTH_SHORT).show();
-					}
+					Intent intent = new Intent();
+					intent.putExtra("MusicState", GlobalVariable.NEXT);
+					intent.setClass(getActivity(), MusicService.class);
+					startService(intent);
 					break;
 				}
 
@@ -413,7 +400,7 @@ public class MainActivity extends FragmentActivity {
 							globalVariable.setMusicCursor(position);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
-							playMusic(getActivity());
+							playMusicGUI();
 						} else if (spnPosition == sortWithName) { // 根據名字排列時
 							musicInfo = musicInfos.get(position);
 
@@ -428,7 +415,7 @@ public class MainActivity extends FragmentActivity {
 							setMainState(0);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
-							playMusic(getActivity());
+							playMusicGUI();
 
 						} else if (spnPosition == sortWithAlbum) { // 根據專輯排列時
 							Log.d("isExpand", String.valueOf(isExpand));
@@ -470,7 +457,7 @@ public class MainActivity extends FragmentActivity {
 										.getDuration());
 								((MainActivity) getActivity()).getViewPager()
 										.setCurrentItem(1);
-								playMusic(getActivity());
+								playMusicGUI();
 
 							}
 
@@ -502,7 +489,7 @@ public class MainActivity extends FragmentActivity {
 										.getDuration());
 								((MainActivity) getActivity()).getViewPager()
 										.setCurrentItem(1);
-								playMusic(getActivity());
+								playMusicGUI();
 
 							}
 
@@ -518,7 +505,7 @@ public class MainActivity extends FragmentActivity {
 							setMainState(0);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
-							playMusic(getActivity());
+							playMusicGUI();
 						}
 					}
 				}
@@ -534,7 +521,6 @@ public class MainActivity extends FragmentActivity {
 
 			@Override
 			public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-				// TODO Auto-generated method stub
 				switch (item.getItemId()) {
 				case R.id.action_add:
 					for (countA = 0; countA < tempList.size(); countA++) {
@@ -631,7 +617,6 @@ public class MainActivity extends FragmentActivity {
 
 			@Override
 			public void onDestroyActionMode(ActionMode mode) {
-				// TODO Auto-generated method stub
 				Log.d("sss", "ondestroyActionMode");
 				if (spnPosition == sortWithName) {
 					for (countA = 0; countA < musicInfos.size(); countA++) {
@@ -661,14 +646,13 @@ public class MainActivity extends FragmentActivity {
 			@Override
 			public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
 				Log.d("sss", "onPrepareActionMode");
-				// TODO Auto-generated method stub
 				return false;
 			}
 
 			@Override
 			public void onItemCheckedStateChanged(ActionMode mode,
 					int position, long id, boolean checked) {
-				// TODO Auto-generated method stub
+
 
 				// mlistView.setSelection(position);
 				Log.d("sss", "position=" + position);
@@ -790,9 +774,6 @@ public class MainActivity extends FragmentActivity {
 						.getCurrentPosition());
 				// 獲得播放時間並更改text view
 				musicTempTime = MusicService.mediaPlayer.getCurrentPosition();
-				songTime.setText(MusicDatabase
-						.formatTime((long) MusicService.mediaPlayer
-								.getCurrentPosition()));
 				handler.postDelayed(updateThread, 100);
 			}
 		};
@@ -1040,7 +1021,7 @@ public class MainActivity extends FragmentActivity {
 		private int prtVolume;
 		private int curMode;
 		private boolean isIdleMode = false;
-		public boolean phoneQuiet = false;
+		private boolean phoneQuiet = false;
 		private static final int noneMode = 0;
 		private static final int quietMode = 1;
 		private static final int commuterMode = 2;
@@ -1179,7 +1160,7 @@ public class MainActivity extends FragmentActivity {
 
 		}
 
-		// 按鈕是否監聽 // TODO listenTurn
+		// 按鈕是否監聽
 		private void listenTurn(int curMode) {
 			// quiet Mode 下的監聽判斷
 			if (curMode == quietMode) {
@@ -1360,7 +1341,7 @@ public class MainActivity extends FragmentActivity {
 				Log.d("Context", "Left");
 				if (globalVariable.getMusicCursor() > 0) { // 還沒到第一首
 					musicCursor--;
-					playMusic(getActivity());
+					playMusicGUI();
 
 				}
 
@@ -1368,7 +1349,7 @@ public class MainActivity extends FragmentActivity {
 				Log.d("Context", "Right");
 				if (musicCursor < playList.size() - 1) { // 還沒到最後一首
 					musicCursor++;
-					playMusic(getActivity());
+					playMusicGUI();
 				}
 			}
 		}
@@ -1397,7 +1378,7 @@ public class MainActivity extends FragmentActivity {
 					// 加入播放清單
 					playList.clear();
 					playList.add(musicInfos.get(randomTemp));
-					playMusic(getActivity());
+					playMusicGUI();
 					Log.d("randomSuite", Long.toString(randomTemp));
 				} else {
 					continue;
@@ -1407,7 +1388,22 @@ public class MainActivity extends FragmentActivity {
 		}
 
 	} // Context End
-
+	
+	//TODO 廣播接收
+	private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {  
+        @Override  
+        public void onReceive(Context context, Intent intent) {
+        	if (intent.getAction().equals("playNextSong") ||
+        			intent.getAction().equals("playPreSong")) {  
+        		playMusicGUI(); 
+            } else if (intent.getAction().equals("theLastSong")) {
+				playMusicEnd();
+			}
+        	
+        }
+	};
+	
+	
 	/* 全域方法 */// TODO 全域方法
 	// 播放及暫停方法
 	public void playBtnAction(Activity activity) {
@@ -1415,7 +1411,7 @@ public class MainActivity extends FragmentActivity {
 		if (isPlaying == false && isPause == false) {
 			// music list 是否還有歌曲
 			if (globalVariable.getMusicCursor() <= playList.size()) {
-				playMusic(activity);
+				playMusicGUI();
 			} else {
 				Toast.makeText(activity, "沒有音樂檔", Toast.LENGTH_SHORT).show();
 			}
@@ -1440,30 +1436,34 @@ public class MainActivity extends FragmentActivity {
 		}
 	}
 
-	// 純播放方法
-	public void playMusic(Activity activity) {
+	// 播放時介面設定
+	public void playMusicGUI() {
 		imgBtn_play.setImageResource(R.drawable.player_pause);
-		Intent intent = new Intent();
-		intent.putExtra("PATH", playList.get(globalVariable.getMusicCursor())
-				.getPath());
-		intent.putExtra("MusicState", GlobalVariable.PLAY);
-		intent.setClass(activity, MusicService.class);
-		activity.startService(intent);
-		// 設置main Fragment 狀態與外觀
 		setMainState(globalVariable.getMusicCursor());
 		handler.post(updateThread);
 		songTimeBar.setEnabled(true);
-		isPlaying = true;
+		// 更改全域狀態
+		globalVariable.setIsPlaying(true);
+	}
+	// 結束播放時介面設定
+	public void playMusicEnd() {
+		imgBtn_play.setImageResource(R.drawable.player_play);
+		handler.removeCallbacks(updateThread);
+		songTimeBar.setProgress(0);
+		songTimeBar.setEnabled(false);
+		// 更改全域狀態
+		globalVariable.setIsPlaying(false);
+		globalVariable.setIsPause(false);
 	}
 
 	// 設置Main元件狀態
 	@SuppressWarnings("deprecation")
 	public void setMainState(int musicCursor) {
-		songTitle.setText(playList.get(musicCursor).getTitle());
-		songArtist.setText(playList.get(musicCursor).getArtist());
-		songAlbum.setText(playList.get(musicCursor).getAlbum());
-		songTime.setText(playList.get(musicCursor).getTime());
-		background = new BitmapDrawable(playList.get(musicCursor)
+		songTitle.setText(globalVariable.getPlayingNow().getTitle());
+		songArtist.setText(globalVariable.getPlayingNow().getArtist());
+		songAlbum.setText(globalVariable.getPlayingNow().getAlbum());
+		songTime.setText(globalVariable.getPlayingNow().getTime());
+		background = new BitmapDrawable(globalVariable.getPlayingNow()
 				.getCoverData());
 		vLayout.setBackground(background);
 		vLayout.getBackground().setAlpha(100);
