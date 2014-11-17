@@ -13,7 +13,7 @@
     android:weightSum="1"
     tools:context="com.fcumusicplayer.MainActivity$PlaceholderFragment" >
 
-    <com.fpmusicplayer.MarqueeTextView
+    <com.fcuproject.musicplayer.MarqueeTextView
         android:id="@+id/songTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -28,7 +28,7 @@
         android:textSize="28sp"
         android:textStyle="bold" />
 
-    <com.fpmusicplayer.MarqueeTextView
+    <com.fcuproject.musicplayer.MarqueeTextView
         android:id="@+id/songAlbum"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -42,7 +42,7 @@
         android:textColor="#000000"
         android:textSize="28sp" />
 
-    <com.fpmusicplayer.MarqueeTextView
+    <com.fcuproject.musicplayer.MarqueeTextView
         android:id="@+id/songArtist"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -95,7 +95,7 @@
             android:src="@drawable/pre_song" />
 
         <ImageButton
-            android:id="@+id/imgBtn_add"
+            android:id="@+id/imgBtn_play"
             android:layout_width="70dp"
             android:layout_height="70dp"
             android:layout_gravity="center"

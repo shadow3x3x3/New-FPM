@@ -1,4 +1,4 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 /*
  * 自訂Adapter用以配對資料欄位並顯示於list view中
@@ -6,6 +6,7 @@ package com.fpmusicplayer;
  */
 
 import java.util.ArrayList;
+
 
 import android.content.Context;
 import android.view.LayoutInflater;

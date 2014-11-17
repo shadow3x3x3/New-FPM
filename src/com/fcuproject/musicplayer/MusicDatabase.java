@@ -1,4 +1,4 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
@@ -26,43 +26,48 @@ public class MusicDatabase {
 	}
 
 	// 取得音樂檔案資訊
-	public ArrayList<MusicInfo> readMusic(Activity mainActivity)
+	public ArrayList<MusicInfo> readMusic(final Activity mainActivity)
 			throws FileNotFoundException {
-		int index = 0;
-		/* 解析音樂檔 */
-		Cursor musicCursor = mainActivity.getContentResolver().query(
-				MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-				new String[] { MediaStore.Audio.Media.TITLE, 		// 取得音樂檔名稱
-						       MediaStore.Audio.Media.ARTIST, 		// 取得演出者
-						       MediaStore.Audio.Media.TRACK, 		// 取得音樂音軌
-						       MediaStore.Audio.Media.ALBUM, 		// 取得專輯名稱
-						       MediaStore.Audio.Media.ALBUM_ID, 	// 取得專輯ID
-						       MediaStore.Audio.Media._ID, 			// 取得音樂id
-						       MediaStore.Audio.Media.DATA, 		// 取得音樂路徑
-						       MediaStore.Audio.Media.DURATION, 	// 取得音樂檔長度
-						       MediaStore.Audio.Media.DISPLAY_NAME, // 取得表示名稱
-				}, null, null, null);
+		new Thread() {
+			public void run() {
+				int index = 0;
+				/* 解析音樂檔 */
+				Cursor musicCursor = mainActivity.getContentResolver().query(
+						MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+						new String[] { MediaStore.Audio.Media.TITLE, 		// 取得音樂檔名稱
+								       MediaStore.Audio.Media.ARTIST, 		// 取得演出者
+								       MediaStore.Audio.Media.TRACK, 		// 取得音樂音軌
+								       MediaStore.Audio.Media.ALBUM, 		// 取得專輯名稱
+								       MediaStore.Audio.Media.ALBUM_ID, 	// 取得專輯ID
+								       MediaStore.Audio.Media._ID, 			// 取得音樂id
+								       MediaStore.Audio.Media.DATA, 		// 取得音樂路徑
+								       MediaStore.Audio.Media.DURATION, 	// 取得音樂檔長度
+								       MediaStore.Audio.Media.DISPLAY_NAME, // 取得表示名稱
+						}, null, null, null);
 
-		// 移動指標
-		musicCursor.moveToFirst();
-		// 讀取每一個音樂檔
-		while (musicCursor.moveToNext()) {
-			// 放入MusicInfo
-			MusicInfo temp = new MusicInfo();
-			temp.setTitle		(musicCursor.getString(0));
-			temp.setArtist		(musicCursor.getString(1));
-			temp.setTrack		(musicCursor.getInt(2));
-			temp.setAlbum		(musicCursor.getString(3));
-			temp.setAlbumID		(musicCursor.getLong(4));
-			temp.setId			(musicCursor.getInt(5));
-			temp.setPath		(musicCursor.getString(6));
-			temp.setDuration	(musicCursor.getLong(7));
-			temp.setTime		(formatTime(musicCursor.getLong(7)));
-			temp.setCoverData	(getAlbumCover(temp.getAlbumID(), mainActivity));
-			musicInfos.add(index, temp);
-			index++;
-		}
-		musicCursor.close();
+				// 移動指標
+				musicCursor.moveToFirst();
+				// 讀取每一個音樂檔
+				while (musicCursor.moveToNext()) {
+					// 放入MusicInfo
+					MusicInfo temp = new MusicInfo();
+					temp.setTitle		(musicCursor.getString(0));
+					temp.setArtist		(musicCursor.getString(1));
+					temp.setTrack		(musicCursor.getInt(2));
+					temp.setAlbum		(musicCursor.getString(3));
+					temp.setAlbumID		(musicCursor.getLong(4));
+					temp.setId			(musicCursor.getInt(5));
+					temp.setPath		(musicCursor.getString(6));
+					temp.setDuration	(musicCursor.getLong(7));
+					temp.setTime		(formatTime(musicCursor.getLong(7)));
+					temp.setCoverData	(getAlbumCover(temp.getAlbumID(), mainActivity));
+					musicInfos.add(index, temp);
+					index++;
+				}
+				musicCursor.close();
+			}
+		}.start();
+		
 		return musicInfos;
 	}// readMusic end
 

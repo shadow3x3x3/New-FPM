@@ -1,4 +1,4 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 
 import android.app.PendingIntent;

@@ -1,4 +1,4 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -55,15 +55,15 @@ import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 
-import com.fpmusicplayer.ScreenObserver.ScreenStateListener;
-import com.service.MusicService;
+import com.fcuproject.musicplayer.ScreenObserver.ScreenStateListener;
+import com.fcuproject.service.MusicService;
+
 
 @SuppressLint({ "InflateParams", "DefaultLocale" })
 public class MainActivity extends FragmentActivity {
 	/* 引入全域變數 */
 	GlobalVariable globalVariable;
 	/* 宣告物件變數 */
-	private MusicDatabase mDatabase;
 	private SectionsPagerAdapter mSectionsPagerAdapter;
 	private ViewPager mViewPager;
 	private TextView songTitle, songAlbum, songArtist;
@@ -93,25 +93,27 @@ public class MainActivity extends FragmentActivity {
 		// 設置窗口無標題
 		Log.d("Activity", "onCreate");
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		globalVariable = (GlobalVariable) getApplicationContext();
+		globalVariable.setMainActivity(this);
+//		Intent startIntent = new Intent(this, MusicService.class);
+//		startIntent.putExtra("MusicState", GlobalVariable.SCAN);
+//		startService(startIntent);
+		MusicDatabase musicDatabase = new MusicDatabase();
+		try {
+			playList = musicDatabase.readMusic(this);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		globalVariable.setAllMusicList(playList);
+		
+		
+		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
 
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
-		globalVariable = (GlobalVariable) getApplicationContext();
-		globalVariable.setMainActivity(this);
 		
-		mDatabase = new MusicDatabase();
-		try {
-			globalVariable.setAllMusicList(mDatabase.readMusic
-					(globalVariable.getActivity()));			
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
 		viewPager_initial();
-
-		Intent startIntent = new Intent(this, MusicService.class);
-		startService(startIntent);
 
 		playList 	= globalVariable.getPlayList();
 		albumList 	= new ArrayList<MusicInfo>();
@@ -125,6 +127,7 @@ public class MainActivity extends FragmentActivity {
 	// Activity被強制關閉時結束通知
 	@Override
 	protected void onDestroy() {
+		Log.d("Activity", "onDestroy");
 		super.onDestroy();
 		unregisterReceiver(broadcastReceiver);
 		android.os.Process.killProcess(android.os.Process.myPid());
@@ -133,6 +136,7 @@ public class MainActivity extends FragmentActivity {
 	// TODO filter
 	@Override
 	protected void onResume(){
+		Log.d("Activity", "onResume");
 		super.onResume();
 		IntentFilter filter = new IntentFilter();    
         filter.addAction("playNextSong"); 
@@ -261,7 +265,7 @@ public class MainActivity extends FragmentActivity {
 			songAlbum 	= (TextView) 	view.findViewById(R.id.songAlbum);
 			songArtist 	= (TextView) 	view.findViewById(R.id.songArtist);
 			songTime 	= (TextView) 	view.findViewById(R.id.songTime);
-			imgBtn_play = (ImageButton) view.findViewById(R.id.imgBtn_add);
+			imgBtn_play = (ImageButton) view.findViewById(R.id.imgBtn_play);
 			imgBtn_next = (ImageButton) view.findViewById(R.id.imgBtn_next);
 			imgBtn_pre 	= (ImageButton) view.findViewById(R.id.imgBtn_pre);
 			songTimeBar = (SeekBar) 	view.findViewById(R.id.songTimeBar);
@@ -284,7 +288,7 @@ public class MainActivity extends FragmentActivity {
 			public void onClick(View v) {
 				switch (v.getId()) {
 				// 播放暫停鍵
-				case R.id.imgBtn_add: {
+				case R.id.imgBtn_play: {
 					setMainState(globalVariable.getMusicCursor());
 					callServicePlay(getActivity());
 					break;
@@ -1335,14 +1339,12 @@ public class MainActivity extends FragmentActivity {
 					intent.putExtra("MusicState", GlobalVariable.PRE);
 					intent.setClass(getActivity(), MusicService.class);
 					startService(intent);
-					callServicePlay(getActivity());
 				}
 
 			} else if (gravityX < -3 && gravityZ > 0) {
 				Log.d("Context", "Right");
 				if (globalVariable.getMusicCursor() < globalVariable.getPlayListSize() - 1) { // 還沒到最後一首
 					globalVariable.addMusicCursor();
-					callServicePlay(getActivity());
 				}
 			}
 		}

@@ -1,5 +1,6 @@
-package com.service;
+package com.fcuproject.service;
 
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 
 import android.app.Notification;
@@ -14,10 +15,11 @@ import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.fpmusicplayer.GlobalVariable;
-import com.fpmusicplayer.MainActivity;
-import com.fpmusicplayer.MusicInfo;
-import com.fpmusicplayer.R;
+import com.fcuproject.musicplayer.GlobalVariable;
+import com.fcuproject.musicplayer.MainActivity;
+import com.fcuproject.musicplayer.MusicDatabase;
+import com.fcuproject.musicplayer.MusicInfo;
+import com.fcuproject.musicplayer.R;
 
 public class MusicService extends Service {
 	/* 引入全域變數 */
@@ -25,6 +27,7 @@ public class MusicService extends Service {
 
 	public static MediaPlayer mediaPlayer;
 	/* 宣告類別物件 */
+	private MusicDatabase mDatabase;
 	private ArrayList<MusicInfo> allMusicList;
 	private String PATH;
 	private Notification notification;
@@ -40,12 +43,8 @@ public class MusicService extends Service {
 	@Override
 	public void onCreate() {
 		globalVariable = (GlobalVariable) getApplicationContext();
-		
 		mediaPlayer = new MediaPlayer();
 		
-		Log.d("Service", allMusicList.get(0).getTitle());
-		
-
 	}
 
 	@Override
@@ -55,8 +54,11 @@ public class MusicService extends Service {
 			musicState = intent.getIntExtra("MusicState", GlobalVariable.PLAY);
 			// 是播放就得到音樂檔路徑
 		}
-		
+
 		switch (musicState) {
+		case GlobalVariable.SCAN:
+			scanMusic();
+			break;
 		case GlobalVariable.PLAY:
 			if (mediaPlayer != null) {
 				playAction();
@@ -69,35 +71,52 @@ public class MusicService extends Service {
 			nextSong();
 			break;
 		}
-		return super.onStartCommand(intent, flags, startId);
+		return super.onStartCommand(intent, Service.START_REDELIVER_INTENT, startId);
 	}
-	
-	// 播放及暫停方法
-		public void playAction() {
-			// 第一次播放
-			if (globalVariable.getPlayState().equals("FirstTimePlay")) {
-				// music list 是否還有歌曲
-				if (globalVariable.getMusicCursor() <= globalVariable.getMusicListSize()) {
-					play(0);
-					globalVariable.setIsPlaying(true);
-				} else {
-					Toast.makeText(getApplicationContext(), "沒有音樂檔", Toast.LENGTH_SHORT).show();
-				}
-				// 正在播放 執行暫停動作
-			} else if (globalVariable.getPlayState().equals("PlayingNow")) {
-				pause();
-				globalVariable.setMusicTempTime(MusicService.mediaPlayer.getCurrentPosition());
-				globalVariable.setIsPlaying(false);
-				globalVariable.setIsPause(true);
-				// 正在暫停 執行播放動作
-			} else if (globalVariable.getPlayState().equals("PauseNow")) {
-				mediaPlayer.seekTo(globalVariable.getMusicTempTime());
-				mediaPlayer.start();
-				globalVariable.setIsPlaying(true);
-				globalVariable.setIsPause(false);
-			}
+
+	// 讀取音樂方法
+	private void scanMusic() {
+		Log.d("Service", "SCAN");
+		mDatabase = new MusicDatabase();
+		try {
+			globalVariable.setAllMusicList(mDatabase.readMusic(globalVariable
+					.getActivity()));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
-	
+		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
+		Log.d("Service", allMusicList.get(0).getTitle());
+	}
+
+	// 判斷播放及暫停
+	public void playAction() {
+		// 第一次播放
+		if (globalVariable.getPlayState().equals("FirstTimePlay")) {
+			// music list 是否還有歌曲
+			if (globalVariable.getMusicCursor() <= globalVariable
+					.getMusicListSize()) {
+				play(0);
+				globalVariable.setIsPlaying(true);
+			} else {
+				Toast.makeText(getApplicationContext(), "沒有音樂檔",
+						Toast.LENGTH_SHORT).show();
+			}
+			// 正在播放 執行暫停動作
+		} else if (globalVariable.getPlayState().equals("PlayingNow")) {
+			pause();
+			globalVariable.setMusicTempTime(MusicService.mediaPlayer
+					.getCurrentPosition());
+			globalVariable.setIsPlaying(false);
+			globalVariable.setIsPause(true);
+			// 正在暫停 執行播放動作
+		} else if (globalVariable.getPlayState().equals("PauseNow")) {
+			mediaPlayer.seekTo(globalVariable.getMusicTempTime());
+			mediaPlayer.start();
+			globalVariable.setIsPlaying(true);
+			globalVariable.setIsPause(false);
+		}
+	}
+
 	// 播放方法
 	private void play(int position) {
 		// 得到音樂檔路徑
@@ -114,6 +133,7 @@ public class MusicService extends Service {
 			mediaPlayer.setDataSource(PATH);
 			mediaPlayer.prepare();
 			mediaPlayer.setOnPreparedListener(new PreparedListener(position));
+			
 			// 播放完監聽
 			mediaPlayer.setOnCompletionListener(new OnCompletionListener() {
 				@Override
@@ -122,7 +142,8 @@ public class MusicService extends Service {
 					if (globalVariable.isLastOne()) { // 最後一首的情形
 						intent = new Intent("theLastSong");
 						sendBroadcast(intent);
-						Toast.makeText(getApplicationContext(), "已經沒有下一首了", 1000).show();
+						Toast.makeText(getApplicationContext(), "已經沒有下一首了",
+								1000).show();
 					} else { // 還沒到最後一首
 						nextSong();
 					}
@@ -142,9 +163,10 @@ public class MusicService extends Service {
 		sendBroadcast(intent);
 		mediaPlayer.pause();
 		musicState = GlobalVariable.PAUSE;
-		
+
 	}
 
+	// 上一首方法
 	private void preSong() {
 		if (globalVariable.getMusicCursor() > 0) { // 還沒到第一首
 			globalVariable.minusMusicCursor();
@@ -152,23 +174,24 @@ public class MusicService extends Service {
 			sendBroadcast(intent);
 			play(0);
 		} else {
-			Toast.makeText(getApplicationContext(), "沒有上一首",
-					Toast.LENGTH_SHORT).show();
+			Toast.makeText(getApplicationContext(), "沒有上一首", Toast.LENGTH_SHORT)
+					.show();
 		}
-		
+
 	}
 
+	// 下一首方法
 	private void nextSong() {
 		if (globalVariable.getMusicCursor() < globalVariable.getMusicListSize() - 1) { // 還沒到最後一首
 			globalVariable.addMusicCursor();
-			intent = new Intent("playNextSong");  
-	        sendBroadcast(intent);
+			intent = new Intent("playNextSong");
+			sendBroadcast(intent);
 		} else {
-			Toast.makeText(getApplicationContext(), "沒有下一首",
-					Toast.LENGTH_SHORT).show();
+			Toast.makeText(getApplicationContext(), "沒有下一首", Toast.LENGTH_SHORT)
+					.show();
 		}
-		
-        play(0);
+
+		play(0);
 	}
 
 	// 準備監聽

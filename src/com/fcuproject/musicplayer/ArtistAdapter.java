@@ -1,6 +1,7 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 import java.util.ArrayList;
+
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -9,10 +10,10 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-public class AlbumAdapter extends BaseAdapter {
+public class ArtistAdapter extends BaseAdapter {
 	ArrayList<MusicInfo> musicInfos;
 
-	AlbumAdapter(ArrayList<MusicInfo> musicInfos) {
+	ArtistAdapter(ArrayList<MusicInfo> musicInfos) {
 		this.musicInfos = musicInfos;
 	}
 
@@ -42,16 +43,16 @@ public class AlbumAdapter extends BaseAdapter {
 		if (convertView == null) {
 			LayoutInflater inflater = (LayoutInflater) parent.getContext()
 					.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-			v = inflater.inflate(R.layout.albumlist, parent, false);
+			v = inflater.inflate(R.layout.artistlist, parent, false);
 			holder = new ViewHolder();
-			holder.Album = (TextView) v.findViewById(R.id.album);
+			holder.Artist = (TextView) v.findViewById(R.id.artist);
 			
 			v.setTag(holder);
 		} else {
 			holder = (ViewHolder) v.getTag();
 		}
 		// 設置holder
-		holder.Album.setText(musicInfos.get(position).getAlbum());
+		holder.Artist.setText(musicInfos.get(position).getArtist());
 
 		return v;
 	}
@@ -62,3 +63,4 @@ public class AlbumAdapter extends BaseAdapter {
 		public TextView Artist = null;
 	}
 }
+

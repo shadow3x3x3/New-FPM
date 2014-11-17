@@ -1,4 +1,4 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 import android.content.Context;
 import android.graphics.Rect;

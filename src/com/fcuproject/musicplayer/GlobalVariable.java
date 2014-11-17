@@ -1,4 +1,4 @@
-package com.fpmusicplayer;
+package com.fcuproject.musicplayer;
 
 import java.util.ArrayList;
 
@@ -26,7 +26,7 @@ public class GlobalVariable extends Application {
 
 	/** 固定參數 **/
 	/* 音樂狀態 */
-	public static final int IDLE 	= 0;
+	public static final int SCAN 	= 0;
 	public static final int PLAY 	= 1;
 	public static final int PAUSE 	= 2;
 	public static final int PRE 	= 3;
