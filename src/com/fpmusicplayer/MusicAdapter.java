@@ -17,11 +17,14 @@ import android.widget.TextView;
 
 public class MusicAdapter extends BaseAdapter {
 	/* 宣告區域變數 */
+	MainActivity mainActivity;
 	ArrayList<MusicInfo> musicInfos;
 
-	MusicAdapter(ArrayList<MusicInfo> musicInfos) {
+	MusicAdapter(MainActivity activity, ArrayList<MusicInfo> musicInfos) {
+		this.mainActivity = activity;
 		this.musicInfos = musicInfos;
 	}
+
 
 	@Override
 	public int getCount() {
@@ -63,10 +66,10 @@ public class MusicAdapter extends BaseAdapter {
 		holder.Album.setText(musicInfos.get(position).getAlbum());
 
 		// 加入清單按鈕監聽
-		if (MainActivity.canAdd()) {
+		if (mainActivity.canAdd()) {
 			holder.sButton.setOnClickListener(new View.OnClickListener() {
 				public void onClick(View view) {
-					MainActivity.buttonClicked(view, position);
+					mainActivity.addBtnClicked(position);
 				}
 			});
 		} else {

@@ -1,5 +1,6 @@
 package com.fpmusicplayer;
 
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,8 +19,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.media.MediaPlayer.OnCompletionListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
@@ -64,6 +63,7 @@ public class MainActivity extends FragmentActivity {
 	/* 引入全域變數 */
 	GlobalVariable globalVariable;
 	/* 宣告物件變數 */
+	private MusicDatabase mDatabase;
 	private SectionsPagerAdapter mSectionsPagerAdapter;
 	private ViewPager mViewPager;
 	private TextView songTitle, songAlbum, songArtist;
@@ -73,7 +73,6 @@ public class MainActivity extends FragmentActivity {
 	private View vLayout;
 	private BitmapDrawable background;
 	private ListView mlistView;
-	private ArrayList<MusicInfo> musicInfos;
 	private ArrayList<MusicInfo> playList;
 	private ArrayList<MusicInfo> albumList;
 	private ArrayList<MusicInfo> selectList;
@@ -81,10 +80,12 @@ public class MainActivity extends FragmentActivity {
 	private ArrayList<MusicInfo> tempList;
 	private ArrayList<MusicInfo> deleteList;
 	private Handler handler = new Handler();
-	private int musicTempTime = 0;
+	private static final int showPlaylist = 0;
+	private static final int sortWithName = 1;
+	private static final int sortWithAlbum = 2;
+	private static final int sortWithArtist = 3;
+	private static final int findList = 4;
 	private int spnPosition = 0;
-	private boolean isPlaying = false;
-	private boolean isPause = false;
 	private boolean isExpand = false;
 
 	@Override
@@ -98,13 +99,21 @@ public class MainActivity extends FragmentActivity {
 
 		globalVariable = (GlobalVariable) getApplicationContext();
 		globalVariable.setMainActivity(this);
-
+		
+		mDatabase = new MusicDatabase();
+		try {
+			globalVariable.setAllMusicList(mDatabase.readMusic
+					(globalVariable.getActivity()));			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
 		viewPager_initial();
 
 		Intent startIntent = new Intent(this, MusicService.class);
 		startService(startIntent);
 
-		playList 	= new ArrayList<MusicInfo>();
+		playList 	= globalVariable.getPlayList();
 		albumList 	= new ArrayList<MusicInfo>();
 		artistList 	= new ArrayList<MusicInfo>();
 		selectList 	= new ArrayList<MusicInfo>();
@@ -125,26 +134,13 @@ public class MainActivity extends FragmentActivity {
 	@Override
 	protected void onResume(){
 		super.onResume();
-		IntentFilter filter = new IntentFilter();  
-        filter.addAction("seekbarmaxprogress");  
-        filter.addAction("seekbarprogress");  
-        filter.addAction("playNextSong");  
-        filter.addAction("pause");  
-        filter.addAction("setplay");  
-        filter.addAction("stoploop");  
-        filter.addAction("startloop");  
+		IntentFilter filter = new IntentFilter();    
+        filter.addAction("playNextSong"); 
+        filter.addAction("playPreSong");
+        filter.addAction("theLastSong");
+        filter.addAction("playMusic");
+        filter.addAction("pauseMusic");
         registerReceiver(broadcastReceiver, filter);
-	}
-
-	// Activity 關閉時保存資料
-	@Override
-	protected void onSaveInstanceState(Bundle outState) {
-		Log.d("Activity", "onSave");
-		super.onSaveInstanceState(outState);
-		outState.putInt("Cursor", globalVariable.getMusicCursor());
-		outState.putBoolean("isPlaying", isPlaying);
-		outState.putBoolean("ispause", isPause);
-
 	}
 
 	// 執行序處理進度條
@@ -154,7 +150,7 @@ public class MainActivity extends FragmentActivity {
 			songTimeBar.setProgress(MusicService.mediaPlayer
 					.getCurrentPosition());
 			// 獲得播放時間並更改text view
-			musicTempTime = MusicService.mediaPlayer.getCurrentPosition();
+			globalVariable.setMusicTempTime(MusicService.mediaPlayer.getCurrentPosition());
 			handler.postDelayed(updateThread, 100);
 		}
 	};
@@ -166,7 +162,6 @@ public class MainActivity extends FragmentActivity {
 		mViewPager = (ViewPager) findViewById(R.id.pager);
 		mViewPager.setAdapter(mSectionsPagerAdapter);
 		mViewPager.setCurrentItem(1);
-
 	}
 
 	public ViewPager getViewPager() {
@@ -276,7 +271,7 @@ public class MainActivity extends FragmentActivity {
 			imgBtn_next.setOnClickListener(btnMusicListener);
 			imgBtn_pre.setOnClickListener(btnMusicListener);
 			/* 設置頁面歌曲 */
-			playList.add(0, musicInfos.get(0));
+			playList.add(0, globalVariable.getMusic(0));
 			songTimeBar.setEnabled(false);
 			songTimeBar.setMax((int) playList.get(0).getDuration());
 
@@ -285,14 +280,13 @@ public class MainActivity extends FragmentActivity {
 
 		// 基本控制
 		private Button.OnClickListener btnMusicListener = new Button.OnClickListener() {
-			int musicCursor = globalVariable.getMusicCursor();
 			@Override
 			public void onClick(View v) {
 				switch (v.getId()) {
 				// 播放暫停鍵
 				case R.id.imgBtn_add: {
 					setMainState(globalVariable.getMusicCursor());
-					playBtnAction(getActivity());
+					callServicePlay(getActivity());
 					break;
 				}
 				// 前一首鍵
@@ -330,11 +324,6 @@ public class MainActivity extends FragmentActivity {
 		private int selectPosition = 0;
 		private int countA = 0, countB = 0, flag = 0;
 		private int Pos = 0;
-		private static final int showPlaylist = 0;
-		private static final int sortWithName = 1;
-		private static final int sortWithAlbum = 2;
-		private static final int sortWithArtist = 3;
-		private static final int findList = 4;
 		ModeCallback mCallback = new ModeCallback();
 
 		@Override
@@ -344,7 +333,7 @@ public class MainActivity extends FragmentActivity {
 
 			// 使用自定Adapter顯示歌曲清單
 			mlistView = (ListView) view.findViewById(R.id.musiclist);
-			mAdapter = new MusicAdapter(playList);
+			mAdapter = new MusicAdapter(globalVariable.getMainActivity(), playList);
 			mlistView.setAdapter(mAdapter);
 
 			// 下拉式清單
@@ -372,12 +361,10 @@ public class MainActivity extends FragmentActivity {
 				@Override
 				public void onTextChanged(CharSequence s, int start,
 						int before, int count) {
-
 					if (searchEdit.getText().length() != 0) {
 						searchHandler.post(searchThread);
 						spnPosition = findList;
 					}
-
 				}
 
 				@Override
@@ -392,30 +379,30 @@ public class MainActivity extends FragmentActivity {
 				@Override
 				public void onItemClick(AdapterView<?> parent, View view,
 						int position, long id) {
-					if (musicInfos != null) {
+					if (globalVariable.getMusic() != null) {
 						// 抓取當前位置的資訊
-						MusicInfo musicInfo = musicInfos.get(position);
+						MusicInfo musicInfo = globalVariable.getMusic(position);
 						// 判斷用哪個list來抓取位置
 						if (spnPosition == showPlaylist) { // 顯示播放清單時
 							globalVariable.setMusicCursor(position);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
-							playMusicGUI();
+							callServicePlay(getActivity());
 						} else if (spnPosition == sortWithName) { // 根據名字排列時
-							musicInfo = musicInfos.get(position);
+							musicInfo = globalVariable.getMusic(position);
 
 							// 設置main Fragment 狀態與外觀
 							playList.clear();
 							playList.add(0, musicInfo);
 							imgBtn_play
 									.setImageResource(R.drawable.player_pause);
-							isPlaying = true;
+							globalVariable.setIsPlaying(true);
 							songTimeBar.setMax((int) playList.get(0)
 									.getDuration());
 							setMainState(0);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
-							playMusicGUI();
+							callServicePlay(getActivity());
 
 						} else if (spnPosition == sortWithAlbum) { // 根據專輯排列時
 							Log.d("isExpand", String.valueOf(isExpand));
@@ -424,17 +411,17 @@ public class MainActivity extends FragmentActivity {
 								Log.d("isExpand False",
 										String.valueOf(isExpand));
 								selectList.clear();
-								for (countA = 0; countA < musicInfos.size(); countA++) {
-									if (musicInfos
-											.get(countA)
+								for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+									if (globalVariable
+											.getMusic(countA)
 											.getAlbum()
 											.equals(albumList.get(position)
 													.getAlbum()) == true) {
-										selectList.add(musicInfos.get(countA));
+										selectList.add(globalVariable.getMusic(countA));
 									}
 								}
 								// 顯示選到的album
-								selectAdapter = new MusicAdapter(selectList);
+								selectAdapter = new MusicAdapter(globalVariable.getMainActivity(), selectList);
 								mlistView.setAdapter(selectAdapter);
 								isExpand = true;
 								Log.d("isExpand True", String.valueOf(isExpand));
@@ -457,7 +444,7 @@ public class MainActivity extends FragmentActivity {
 										.getDuration());
 								((MainActivity) getActivity()).getViewPager()
 										.setCurrentItem(1);
-								playMusicGUI();
+								callServicePlay(getActivity());
 
 							}
 
@@ -465,17 +452,18 @@ public class MainActivity extends FragmentActivity {
 							// 沒有展開的情況下 依據選取的位置加到播放清單
 							if (isExpand == false) {
 								selectList.clear();
-								for (countA = 0; countA < musicInfos.size(); countA++) {
-									if (musicInfos
-											.get(countA)
+								for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+									if (globalVariable
+											.getMusic(countA)
 											.getArtist()
 											.equals(artistList.get(position)
 													.getArtist()) == true) {
-										selectList.add(musicInfos.get(countA));
+										selectList.add(globalVariable.getMusic(countA));
 									}
 								}
 								// 顯示選到的artist
-								selectAdapter = new MusicAdapter(selectList);
+								selectAdapter = new MusicAdapter(
+										globalVariable.getMainActivity(), selectList);
 								mlistView.setAdapter(selectAdapter);
 								isExpand = true;
 							} else { // 展開的情況下 將選到的歌手裡的所有歌存到selectList
@@ -489,7 +477,7 @@ public class MainActivity extends FragmentActivity {
 										.getDuration());
 								((MainActivity) getActivity()).getViewPager()
 										.setCurrentItem(1);
-								playMusicGUI();
+								callServicePlay(getActivity());
 
 							}
 
@@ -505,7 +493,7 @@ public class MainActivity extends FragmentActivity {
 							setMainState(0);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
-							playMusicGUI();
+							callServicePlay(getActivity());
 						}
 					}
 				}
@@ -542,9 +530,9 @@ public class MainActivity extends FragmentActivity {
 					tempList.clear();
 					deleteList.clear();
 					if (spnPosition == sortWithName) {
-						for (countA = 0; countA < musicInfos.size(); countA++) {
-							tempList.add(musicInfos.get(countA));
-							musicInfos.get(countA).setBackground(true);
+						for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+							tempList.add(globalVariable.getMusic(countA));
+							globalVariable.getMusic(countA).setBackground(true);
 						}
 						mAdapter.notifyDataSetChanged();
 					} else if (isExpand == true) {
@@ -569,8 +557,8 @@ public class MainActivity extends FragmentActivity {
 					return true;
 				case R.id.action_allcancle:
 					if (spnPosition == sortWithName) {
-						for (countA = 0; countA < musicInfos.size(); countA++) {
-							musicInfos.get(countA).setBackground(false);
+						for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+							globalVariable.getMusic(countA).setBackground(false);
 						}
 						mAdapter.notifyDataSetChanged();
 					} else if (isExpand == true) {
@@ -619,8 +607,8 @@ public class MainActivity extends FragmentActivity {
 			public void onDestroyActionMode(ActionMode mode) {
 				Log.d("sss", "ondestroyActionMode");
 				if (spnPosition == sortWithName) {
-					for (countA = 0; countA < musicInfos.size(); countA++) {
-						musicInfos.get(countA).setBackground(false);
+					for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+						globalVariable.getMusic(countA).setBackground(false);
 					}
 					mAdapter.notifyDataSetChanged();
 				} else if (isExpand == true) {
@@ -659,8 +647,8 @@ public class MainActivity extends FragmentActivity {
 				Log.d("sss", "check=" + checked);
 				if (checked == true) {
 					if (spnPosition == sortWithName) {
-						tempList.add(musicInfos.get(position));
-						musicInfos.get(position).setBackground(checked);
+						tempList.add(globalVariable.getMusic(position));
+						globalVariable.getMusic(position).setBackground(checked);
 						mAdapter.notifyDataSetChanged();
 					} else if (isExpand == true) {
 						tempList.add(selectList.get(position));
@@ -677,8 +665,8 @@ public class MainActivity extends FragmentActivity {
 					}
 				} else {
 					if (spnPosition == sortWithName) {
-						tempList.remove(musicInfos.get(position));
-						musicInfos.get(position).setBackground(checked);
+						tempList.remove(globalVariable.getMusic(position));
+						globalVariable.getMusic(position).setBackground(checked);
 						mAdapter.notifyDataSetChanged();
 					} else if (isExpand == true) {
 						tempList.remove(selectList.get(position));
@@ -706,7 +694,7 @@ public class MainActivity extends FragmentActivity {
 
 			case 1:
 				if (spnPosition == sortWithName) {
-					tempList.add(musicInfos.get(Pos));
+					tempList.add(globalVariable.getMusic(Pos));
 				} else {
 					tempList.add(selectList.get(Pos));
 				}
@@ -726,20 +714,23 @@ public class MainActivity extends FragmentActivity {
 		}
 
 		// 點擊下拉式清單的動作
-		private Spinner.OnItemSelectedListener spnPreferListener = new Spinner.OnItemSelectedListener() {
+		private Spinner.OnItemSelectedListener spnPreferListener 
+			= new Spinner.OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(AdapterView<?> parent, View view,
 					int position, long id) {
 				spnPosition = position;
 				switch (position) {
 				case showPlaylist:
-					mAdapter = new MusicAdapter(playList);
+					mAdapter = new MusicAdapter(
+							globalVariable.getMainActivity(), playList);
 					mlistView.setAdapter(mAdapter);
 					isExpand = false;
 					break;
 
 				case sortWithName:
-					mAdapter = new MusicAdapter(musicInfos);
+					mAdapter = new MusicAdapter(
+							globalVariable.getMainActivity(), globalVariable.getMusic());
 					mlistView.setAdapter(mAdapter);
 					isExpand = false;
 					break;
@@ -773,7 +764,7 @@ public class MainActivity extends FragmentActivity {
 				songTimeBar.setProgress(MusicService.mediaPlayer
 						.getCurrentPosition());
 				// 獲得播放時間並更改text view
-				musicTempTime = MusicService.mediaPlayer.getCurrentPosition();
+				globalVariable.setMusicTempTime(MusicService.mediaPlayer.getCurrentPosition());
 				handler.postDelayed(updateThread, 100);
 			}
 		};
@@ -784,26 +775,26 @@ public class MainActivity extends FragmentActivity {
 			public void run() {
 				Log.d("searchthread", "thread");
 				selectList.clear();
-				for (countA = 0; countA < musicInfos.size(); countA++) {
+				for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
 					// 如果歌名有搜尋到
-					if (musicInfos
-							.get(countA)
+					if (globalVariable
+							.getMusic(countA)
 							.getTitle()
 							.toLowerCase()
 							.indexOf(
 									searchEdit.getText().toString()
 											.toLowerCase()) >= 0) {
 						Log.d("search", "歌名"
-								+ musicInfos.get(countA).getTitle());
-						selectList.add(musicInfos.get(countA));
+								+ globalVariable.getMusic(countA).getTitle());
+						selectList.add(globalVariable.getMusic(countA));
 					}
 
 				}
 
-				for (countA = 0; countA < musicInfos.size(); countA++) {
+				for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
 					// 如果專輯有搜尋到
-					if (musicInfos
-							.get(countA)
+					if (globalVariable
+							.getMusic(countA)
 							.getAlbum()
 							.toLowerCase()
 							.indexOf(
@@ -811,26 +802,26 @@ public class MainActivity extends FragmentActivity {
 											.toLowerCase()) >= 0) {
 						flag = 0;// 判斷是否已經在list裡面
 						for (countB = 0; countB < selectList.size(); countB++) {
-							if (musicInfos.get(countA).getId() == selectList
+							if (globalVariable.getMusic(countA).getId() == selectList
 									.get(countB).getId()) {
 								flag = 1;
 							}
 						}
 						if (flag == 0) {
 							Log.d("search", "歌手名稱"
-									+ musicInfos.get(countA).getTitle());
+									+ globalVariable.getMusic(countA).getTitle());
 							Log.d("search", "歌手"
-									+ musicInfos.get(countA).getArtist());
-							selectList.add(musicInfos.get(countA));
+									+ globalVariable.getMusic(countA).getArtist());
+							selectList.add(globalVariable.getMusic(countA));
 						}
 					}
 
 				}
 
-				for (countA = 0; countA < musicInfos.size(); countA++) {
+				for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
 					// 如果專輯有搜尋到
-					if (musicInfos
-							.get(countA)
+					if (globalVariable
+							.getMusic(countA)
 							.getArtist()
 							.toLowerCase()
 							.indexOf(
@@ -838,52 +829,54 @@ public class MainActivity extends FragmentActivity {
 											.toLowerCase()) >= 0) {
 						flag = 0;// 判斷是否已經在list裡面
 						for (countB = 0; countB < selectList.size(); countB++) {
-							if (musicInfos.get(countA).getId() == selectList
+							if (globalVariable.getMusic(countA).getId() == selectList
 									.get(countB).getId()) {
 								flag = 1;
 							}
 						}
 						if (flag == 0) {
 							Log.d("search", "歌手名稱"
-									+ musicInfos.get(countA).getTitle());
+									+ globalVariable.getMusic(countA).getTitle());
 							Log.d("search", "歌手"
-									+ musicInfos.get(countA).getArtist());
-							selectList.add(musicInfos.get(countA));
+									+ globalVariable.getMusic(countA).getArtist());
+							selectList.add(globalVariable.getMusic(countA));
 						}
 					}
 				}
 
-				MusicAdapter findAdapter = new MusicAdapter(selectList);
+				MusicAdapter findAdapter = new MusicAdapter(globalVariable.getMainActivity(), selectList);
 				mlistView.setAdapter(findAdapter);
+				searchHandler.removeCallbacks(searchThread);
 			}
 		};
 		Handler sortalbumHandler = new Handler();
 		Runnable sortalbumThread = new Runnable() {
 			public void run() {
 				// 依專輯排序
-				Collections.sort(musicInfos, new Comparator<MusicInfo>() {
+				Collections.sort(globalVariable.getMusic(), new Comparator<MusicInfo>() {
 					public int compare(MusicInfo o1, MusicInfo o2) {
 						return o1.getAlbum().compareTo(o2.getAlbum());
 					}
 				});
 				// 將專輯清單不重複顯示出來
-				for (countA = 0; countA < musicInfos.size(); countA++) {
+				for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
 					flag = 0;
 					for (countB = 0; countB < albumList.size(); countB++) {
-						if (musicInfos.get(countA).getAlbum()
+						if (globalVariable.getMusic(countA).getAlbum()
 								.equals(albumList.get(countB).getAlbum()) == true) {
 							flag = 1;
 						}
 					}
 
 					if (flag == 0) {
-						albumList.add(musicInfos.get(countA));
+						albumList.add(globalVariable.getMusic(countA));
 					}
 				}
 
 				// 顯示所有專輯
 				AlbumAdapter alAdapter = new AlbumAdapter(albumList);
 				mlistView.setAdapter(alAdapter);
+				sortalbumHandler.removeCallbacks(searchThread);
 			}
 		};
 
@@ -891,29 +884,30 @@ public class MainActivity extends FragmentActivity {
 		Runnable sortartistThread = new Runnable() {
 			public void run() {
 				// 依歌手排序
-				Collections.sort(musicInfos, new Comparator<MusicInfo>() {
+				Collections.sort(globalVariable.getMusic(), new Comparator<MusicInfo>() {
 					public int compare(MusicInfo o1, MusicInfo o2) {
 						return o1.getArtist().compareTo(o2.getArtist());
 					}
 				});
 				// 將歌手清單不重複顯示出來
-				for (countA = 0; countA < musicInfos.size(); countA++) {
+				for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
 					flag = 0;
 					for (countB = 0; countB < artistList.size(); countB++) {
-						if (musicInfos.get(countA).getArtist()
+						if (globalVariable.getMusic(countA).getArtist()
 								.equals(artistList.get(countB).getArtist()) == true) {
 							flag = 1;
 						}
 					}
 
 					if (flag == 0) {
-						artistList.add(musicInfos.get(countA));
+						artistList.add(globalVariable.getMusic(countA));
 					}
 				}
 
 				// 顯示所有歌手
 				ArtistAdapter arAdapter = new ArtistAdapter(artistList);
 				mlistView.setAdapter(arAdapter);
+				sortartistHandler.removeCallbacks(sortartistThread);
 			}
 		};
 
@@ -924,37 +918,39 @@ public class MainActivity extends FragmentActivity {
 
 				case sortWithAlbum:
 					selectList.clear();
-					for (countA = 0; countA < musicInfos.size(); countA++) {
-						if (musicInfos
-								.get(countA)
+					for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+						if (globalVariable
+								.getMusic(countA)
 								.getAlbum()
 								.equals(albumList.get(selectPosition)
 										.getAlbum()) == true) {
-							selectList.add(musicInfos.get(countA));
+							selectList.add(globalVariable.getMusic(countA));
 						}
 					}
 					// 顯示選到的album
 					MusicAdapter selectalbumAdapter = new MusicAdapter(
+							globalVariable.getMainActivity(), 
 							selectList);
 					mlistView.setAdapter(selectalbumAdapter);
 					break;
 
 				case sortWithArtist:
 					selectList.clear();
-					for (countA = 0; countA < musicInfos.size(); countA++) {
-						if (musicInfos
-								.get(countA)
+					for (countA = 0; countA < globalVariable.getMusicListSize(); countA++) {
+						if (globalVariable
+								.getMusic(countA)
 								.getArtist()
 								.equals(artistList.get(selectPosition)
 										.getArtist()) == true) {
-							selectList.add(musicInfos.get(countA));
+							selectList.add(globalVariable.getMusic(countA));
 						}
 					}
 					// 顯示選到的artist
 					MusicAdapter selectartistAdapter = new MusicAdapter(
+							globalVariable.getMainActivity(), 
 							selectList);
 					mlistView.setAdapter(selectartistAdapter);
-
+					selectHandler.removeCallbacks(selectThread);
 					break;
 				}
 			}
@@ -971,13 +967,13 @@ public class MainActivity extends FragmentActivity {
 			if (isExpand == true) {
 				switch (spnPosition) {
 
-				case MainActivity.ScannerFragment.sortWithAlbum:
+				case sortWithAlbum:
 					AlbumAdapter alAdapter = new AlbumAdapter(albumList);
 					mlistView.setAdapter(alAdapter);
 					isExpand = false;
 					break;
 
-				case MainActivity.ScannerFragment.sortWithArtist:
+				case sortWithArtist:
 					ArtistAdapter arAdapter = new ArtistAdapter(artistList);
 					mlistView.setAdapter(arAdapter);
 					isExpand = false;
@@ -1215,7 +1211,7 @@ public class MainActivity extends FragmentActivity {
 					}
 				});
 			} else {
-
+				crtSuiteBtn.setOnClickListener(null);
 			}
 			// longHaul Mode 下的監聽判斷
 			if (curMode == longHaulMode) {
@@ -1304,52 +1300,49 @@ public class MainActivity extends FragmentActivity {
 						false);
 				audioManager.setStreamMute(AudioManager.STREAM_RING, false);
 				audioManager.setStreamMute(AudioManager.STREAM_SYSTEM, false);
-
 			} else {
-				;
 				audioManager.setStreamVolume(AudioManager.STREAM_RING,
 						ringVolume, 0);
 				audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION,
 						ntfVolume, 0);
 				audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM,
 						sysVolume, 0);
-
 			}
 		}
 
 		// 重力感應改變後的動作
 		private void doWithGravityChange(float gravityX, float gravityY,
 				float gravityZ) {
-			int musicCursor = globalVariable.getMusicCursor();
 			// 暫停與播放
 			if (gravityY > 4) {
 				Log.d("Context", "Up");
-				if (isPlaying == true) {
-					playBtnAction(getActivity());
+				if (globalVariable.getPlayState().equals("PlayingNow")) {
+					callServicePlay(getActivity());
 				}
 
 			} else {
 				Log.d("Context", "Lie");
-				if (isPause == true) {
-					playBtnAction(getActivity());
+				if (globalVariable.getPlayState().equals("PauseNow")) {
+					callServicePlay(getActivity());
 				}
-
 			}
 
 			// 換首
 			if (gravityX > 3 && gravityZ > 0) {
 				Log.d("Context", "Left");
 				if (globalVariable.getMusicCursor() > 0) { // 還沒到第一首
-					musicCursor--;
-					playMusicGUI();
-
+					Intent intent = new Intent();
+					intent.putExtra("MusicState", GlobalVariable.PRE);
+					intent.setClass(getActivity(), MusicService.class);
+					startService(intent);
+					callServicePlay(getActivity());
 				}
 
 			} else if (gravityX < -3 && gravityZ > 0) {
 				Log.d("Context", "Right");
-				if (musicCursor < playList.size() - 1) { // 還沒到最後一首
-					musicCursor++;
-					playMusicGUI();
+				if (globalVariable.getMusicCursor() < globalVariable.getPlayListSize() - 1) { // 還沒到最後一首
+					globalVariable.addMusicCursor();
+					callServicePlay(getActivity());
 				}
 			}
 		}
@@ -1362,7 +1355,7 @@ public class MainActivity extends FragmentActivity {
 			long tempTime = 0;
 
 			// 初始化一個array list 將所有可以取得的數放入
-			while (count < musicInfos.size()) {
+			while (count < globalVariable.getMusicListSize()) {
 				randomAll.add(count);
 				count++;
 			}
@@ -1370,20 +1363,19 @@ public class MainActivity extends FragmentActivity {
 			// 在時間還沒超過前
 			while (tempTime < maxTime) {
 				Random random = new Random();
-				int randomTemp = random.nextInt(musicInfos.size());
+				int randomTemp = random.nextInt(globalVariable.getMusicListSize());
 				if (randomAll.contains(randomTemp)) {
 					randomAll.remove(randomTemp);
 					tempTime = tempTime
-							+ musicInfos.get(randomTemp).getDuration();
+							+ globalVariable.getMusic(randomTemp).getDuration();
 					// 加入播放清單
 					playList.clear();
-					playList.add(musicInfos.get(randomTemp));
-					playMusicGUI();
+					playList.add(globalVariable.getMusic(randomTemp));
+					callServicePlay(getActivity());
 					Log.d("randomSuite", Long.toString(randomTemp));
 				} else {
 					continue;
 				}
-
 			}
 		}
 
@@ -1395,55 +1387,40 @@ public class MainActivity extends FragmentActivity {
         public void onReceive(Context context, Intent intent) {
         	if (intent.getAction().equals("playNextSong") ||
         			intent.getAction().equals("playPreSong")) {  
-        		playMusicGUI(); 
+        		playMusicGUI(true); 
             } else if (intent.getAction().equals("theLastSong")) {
 				playMusicEnd();
+			} else if (intent.getAction().equals("playMusic")){
+				playMusicGUI(true);
+			} else if (intent.getAction().equals("pauseMusic")){
+				playMusicGUI(false);
 			}
-        	
         }
 	};
 	
 	
 	/* 全域方法 */// TODO 全域方法
-	// 播放及暫停方法
-	public void playBtnAction(Activity activity) {
-		// 第一次播放
-		if (isPlaying == false && isPause == false) {
-			// music list 是否還有歌曲
-			if (globalVariable.getMusicCursor() <= playList.size()) {
-				playMusicGUI();
-			} else {
-				Toast.makeText(activity, "沒有音樂檔", Toast.LENGTH_SHORT).show();
-			}
-			// 正在播放 執行暫停動作
-		} else if (isPlaying == true) {
-			Log.d("MAIN", "PAUSE");
-			imgBtn_play.setImageResource(R.drawable.player_play);
-			Intent intent = new Intent();
-			intent.putExtra("MusicState", GlobalVariable.PAUSE);
-			intent.setClass(activity, MusicService.class);
-			activity.startService(intent);
-			musicTempTime = MusicService.mediaPlayer.getCurrentPosition();
-			isPlaying = false;
-			isPause = true;
-			// 正在暫停 執行播放動作
-		} else if (isPause == true) {
-			MusicService.mediaPlayer.seekTo(musicTempTime);
-			MusicService.mediaPlayer.start();
-			imgBtn_play.setImageResource(R.drawable.player_pause);
-			isPlaying = true;
-			isPause = false;
-		}
+	
+	// 呼叫播放
+	public void callServicePlay(Activity activity) {
+		Intent intent = new Intent();
+		intent.putExtra("MusicState", GlobalVariable.PLAY);
+		intent.setClass(activity, MusicService.class);
+		startService(intent);
 	}
+	
 
 	// 播放時介面設定
-	public void playMusicGUI() {
-		imgBtn_play.setImageResource(R.drawable.player_pause);
-		setMainState(globalVariable.getMusicCursor());
-		handler.post(updateThread);
-		songTimeBar.setEnabled(true);
-		// 更改全域狀態
-		globalVariable.setIsPlaying(true);
+	public void playMusicGUI(boolean isPlaying) {
+		if (isPlaying) {
+			imgBtn_play.setImageResource(R.drawable.player_pause);
+			setMainState(globalVariable.getMusicCursor());
+			handler.post(updateThread);
+			songTimeBar.setEnabled(true);
+		} else {
+			imgBtn_play.setImageResource(R.drawable.player_play);
+		}
+		
 	}
 	// 結束播放時介面設定
 	public void playMusicEnd() {
@@ -1468,28 +1445,25 @@ public class MainActivity extends FragmentActivity {
 		vLayout.setBackground(background);
 		vLayout.getBackground().setAlpha(100);
 	}
-
-	/* 外部使用方法 */
 	
-
-	// 得到目前得到目前是否能加入清單
-	public static Boolean canAdd() {
-		if (spnPosition == showPlaylist) {
-			return false;
-		} else {
-			return true;
-		}
-	}
-
 	// 加入清單按鈕
-	public static void buttonClicked(View view, int position) {
+	public void addBtnClicked(int position) {
 		Log.d("click", "MainActivity" + Integer.toString(position));
 		if (spnPosition == sortWithName) {
-			playList.add(musicInfos.get(position));
-		} else {
+			playList.add(globalVariable.getMusic(position));
+		} else {				
 			playList.add(selectList.get(position));
 		}
-		Toast.makeText(view.getContext(), "已加入播放清單", Toast.LENGTH_SHORT).show();
+			Toast.makeText(getApplicationContext(), "已加入播放清單", Toast.LENGTH_SHORT).show();
 	}
+	
+	// 得到目前是否能加入清單
+		public Boolean canAdd() {
+			if (spnPosition == showPlaylist) {
+				return false;
+			} else {
+				return true;
+			}
+		}
 
 } // Activity End

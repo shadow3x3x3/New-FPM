@@ -2,31 +2,27 @@ package com.fpmusicplayer;
 
 import java.util.ArrayList;
 
-import android.R.integer;
 import android.app.Activity;
 import android.app.Application;
 
 public class GlobalVariable extends Application {
 	private Activity mActivity;
+	private MainActivity mainActivity;
 
 	/* 歌曲序列 */
 	private ArrayList<MusicInfo> allMusicList;
 	private ArrayList<MusicInfo> playList;
-	private ArrayList<MusicInfo> albumList;
-	private ArrayList<MusicInfo> selectList;
-	private ArrayList<MusicInfo> artistList;
-	private ArrayList<MusicInfo> tempList;
-	private ArrayList<MusicInfo> deleteList;
 
 	/* 指標 */
 	private int musicCursor 	= 0;
-	private int musicTempTime 	= 0;
 	private int spnPosition 	= 0;
+	
+	/* 暫存 */
+	private int musicTempTime 	= 0;
 
 	/* 布林值 */
 	private boolean isPlaying	= false;
 	private boolean isPause 	= false;
-	private boolean isExpand 	= false;
 
 	/** 固定參數 **/
 	/* 音樂狀態 */
@@ -37,30 +33,63 @@ public class GlobalVariable extends Application {
 	public static final int NEXT 	= 4;
 
 	/* Getter */
-	public int getMusicListSize() {
-		return allMusicList.size();
+	
+	public MainActivity getMainActivity() {
+		return mainActivity;
 	}
 	
 	public Activity getActivity() {
 		return mActivity;
+	}
+	
+	public ArrayList<MusicInfo> getMusic() {
+		return allMusicList;
+	}
+	
+	public MusicInfo getMusic(int pos) {
+		return allMusicList.get(pos);
+	}
+	
+	public ArrayList<MusicInfo> getPlayList() {
+		return playList;
+	}
+	
+	public int getMusicListSize() {
+		return allMusicList.size();
+	}
+	
+	public int getPlayListSize(){
+		return playList.size();
 	}
 
 	public int getMusicCursor() {
 		return musicCursor;
 	}
 
-	public int getMusicTempTime() {
-		return musicTempTime;
-	}
-
 	public int getSpnPosition() {
 		return spnPosition;
 	}
 	
+	public int getMusicTempTime() {
+		return musicTempTime;
+	}
+	
+	public String getPlayState(){
+		if (isPlaying == false && isPause == false ) {
+			return "FirstTimePlay";
+		} else if (isPlaying) {
+			return "PlayingNow";
+		} else if (isPause) {
+			return "PauseNow";
+		}
+		
+		return "error";
+	}
 
 	/* Setter */
 	public void setMainActivity(MainActivity mainActivity) {
 		this.mActivity = mainActivity;
+		this.mainActivity = mainActivity;
 	}
 	
 	public void setAllMusicList(ArrayList<MusicInfo> allMusicList) {
@@ -87,9 +116,6 @@ public class GlobalVariable extends Application {
 		this.isPause = isPause;
 	}
 	
-	public void setIsExpand(boolean isExpand) {
-		this.isExpand = isExpand;
-	}
 	
 	/* method */
 	public void addIntoPlayList(MusicInfo musicInfo) {
@@ -100,8 +126,12 @@ public class GlobalVariable extends Application {
 		playList.clear();
 	}	
 	
-	public void AddMusicCursor() {
+	public void addMusicCursor() {
 		musicCursor++;
+	}
+	
+	public void minusMusicCursor(){
+		musicCursor--;
 	}
 	
 	public void resetMusicCursor() {

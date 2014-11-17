@@ -1,6 +1,5 @@
 package com.service;
 
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 
 import android.app.Notification;
@@ -17,7 +16,6 @@ import android.widget.Toast;
 
 import com.fpmusicplayer.GlobalVariable;
 import com.fpmusicplayer.MainActivity;
-import com.fpmusicplayer.MusicDatabase;
 import com.fpmusicplayer.MusicInfo;
 import com.fpmusicplayer.R;
 
@@ -28,7 +26,6 @@ public class MusicService extends Service {
 	public static MediaPlayer mediaPlayer;
 	/* 宣告類別物件 */
 	private ArrayList<MusicInfo> allMusicList;
-	private MusicDatabase mDatabase;
 	private String PATH;
 	private Notification notification;
 	private NotificationManager notificationManager;
@@ -43,15 +40,11 @@ public class MusicService extends Service {
 	@Override
 	public void onCreate() {
 		globalVariable = (GlobalVariable) getApplicationContext();
-		mDatabase = new MusicDatabase();
-		try {
-			allMusicList = mDatabase.readMusic(globalVariable.getActivity());
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		globalVariable.setAllMusicList(allMusicList);
-		globalVariable.addIntoPlayList(allMusicList.get(0));
+		
 		mediaPlayer = new MediaPlayer();
+		
+		Log.d("Service", allMusicList.get(0).getTitle());
+		
 
 	}
 
@@ -66,12 +59,8 @@ public class MusicService extends Service {
 		switch (musicState) {
 		case GlobalVariable.PLAY:
 			if (mediaPlayer != null) {
-				
-				play(0);
+				playAction();
 			}
-			break;
-		case GlobalVariable.PAUSE:
-			pause();
 			break;
 		case GlobalVariable.PRE:
 			preSong();
@@ -82,14 +71,43 @@ public class MusicService extends Service {
 		}
 		return super.onStartCommand(intent, flags, startId);
 	}
-
+	
+	// 播放及暫停方法
+		public void playAction() {
+			// 第一次播放
+			if (globalVariable.getPlayState().equals("FirstTimePlay")) {
+				// music list 是否還有歌曲
+				if (globalVariable.getMusicCursor() <= globalVariable.getMusicListSize()) {
+					play(0);
+					globalVariable.setIsPlaying(true);
+				} else {
+					Toast.makeText(getApplicationContext(), "沒有音樂檔", Toast.LENGTH_SHORT).show();
+				}
+				// 正在播放 執行暫停動作
+			} else if (globalVariable.getPlayState().equals("PlayingNow")) {
+				pause();
+				globalVariable.setMusicTempTime(MusicService.mediaPlayer.getCurrentPosition());
+				globalVariable.setIsPlaying(false);
+				globalVariable.setIsPause(true);
+				// 正在暫停 執行播放動作
+			} else if (globalVariable.getPlayState().equals("PauseNow")) {
+				mediaPlayer.seekTo(globalVariable.getMusicTempTime());
+				mediaPlayer.start();
+				globalVariable.setIsPlaying(true);
+				globalVariable.setIsPause(false);
+			}
+		}
+	
 	// 播放方法
 	private void play(int position) {
 		// 得到音樂檔路徑
 		PATH = globalVariable.getPlayingNow().getPath();
 		Intent intentBroadcast = new Intent();
+		// 發送廣播
 		intentBroadcast.setAction("android.appwidget.action.APPWIDGET_UPDATE");
 		sendBroadcast(intentBroadcast);
+		intent = new Intent("playMusic");
+		sendBroadcast(intent);
 		sendNotification(globalVariable);
 		try {
 			mediaPlayer.reset();
@@ -119,13 +137,17 @@ public class MusicService extends Service {
 	// 暫停方法
 	private void pause() {
 		Log.d("service", "pause");
+		// 發送廣播
+		intent = new Intent("pauseMusic");
+		sendBroadcast(intent);
 		mediaPlayer.pause();
 		musicState = GlobalVariable.PAUSE;
+		
 	}
 
 	private void preSong() {
 		if (globalVariable.getMusicCursor() > 0) { // 還沒到第一首
-			globalVariable.setMusicCursor(globalVariable.getMusicCursor()-1);
+			globalVariable.minusMusicCursor();
 			intent = new Intent("playPreSong");
 			sendBroadcast(intent);
 			play(0);
@@ -138,7 +160,7 @@ public class MusicService extends Service {
 
 	private void nextSong() {
 		if (globalVariable.getMusicCursor() < globalVariable.getMusicListSize() - 1) { // 還沒到最後一首
-			globalVariable.setMusicCursor(globalVariable.getMusicCursor()+1);
+			globalVariable.addMusicCursor();
 			intent = new Intent("playNextSong");  
 	        sendBroadcast(intent);
 		} else {
@@ -147,10 +169,6 @@ public class MusicService extends Service {
 		}
 		
         play(0);
-	}
-
-	private void getCurPlay() {
-		globalVariable.getPlayingNow();
 	}
 
 	// 準備監聽
