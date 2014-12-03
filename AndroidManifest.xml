@@ -38,8 +38,7 @@
             </intent-filter>
         </activity>
 
-        <service
-            
+        <service          
             android:name="com.fcuproject.service.MusicService"
             android:exported="false" >
             <intent-filter>

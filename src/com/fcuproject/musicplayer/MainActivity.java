@@ -1,6 +1,5 @@
 package com.fcuproject.musicplayer;
 
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -93,38 +92,32 @@ public class MainActivity extends FragmentActivity {
 		// 設置窗口無標題
 		Log.d("Activity", "onCreate");
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		globalVariable = (GlobalVariable) getApplicationContext();
-		globalVariable.setMainActivity(this);
-//		Intent startIntent = new Intent(this, MusicService.class);
-//		startIntent.putExtra("MusicState", GlobalVariable.SCAN);
-//		startService(startIntent);
-		MusicDatabase musicDatabase = new MusicDatabase();
-		try {
-			playList = musicDatabase.readMusic(this);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		globalVariable.setAllMusicList(playList);
-		
-		
-		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
-
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
 		
-		viewPager_initial();
-
-		playList 	= globalVariable.getPlayList();
+		playList	= new ArrayList<MusicInfo>();
 		albumList 	= new ArrayList<MusicInfo>();
 		artistList 	= new ArrayList<MusicInfo>();
 		selectList 	= new ArrayList<MusicInfo>();
 		tempList 	= new ArrayList<MusicInfo>();
 		deleteList 	= new ArrayList<MusicInfo>();
+		
+		globalVariable = (GlobalVariable) getApplicationContext();
+		globalVariable.setMainActivity(this);
+		
+		Intent startIntent = new Intent(this, MusicService.class);
+		startIntent.putExtra("MusicState", GlobalVariable.SCAN);
+		startService(startIntent);
+		
+		setContentView(R.layout.activity_main);
+		
+		viewPager_initial();
+
+		playList 	= globalVariable.getPlayList();
+		
 
 	}
 
-	// Activity被強制關閉時結束通知
+	// Activity被強制關閉時結束通知與注銷廣播
 	@Override
 	protected void onDestroy() {
 		Log.d("Activity", "onDestroy");
@@ -150,11 +143,15 @@ public class MainActivity extends FragmentActivity {
 	// 執行序處理進度條
 	Runnable updateThread = new Runnable() {
 		public void run() {
+			MusicDatabase musicDatabase = new MusicDatabase();
 			// 獲得歌曲現在播放位置並設置成播放進度條的值
 			songTimeBar.setProgress(MusicService.mediaPlayer
 					.getCurrentPosition());
 			// 獲得播放時間並更改text view
 			globalVariable.setMusicTempTime(MusicService.mediaPlayer.getCurrentPosition());
+			songTime.setText(musicDatabase
+					.formatTime((long) MusicService.mediaPlayer
+							.getCurrentPosition()));
 			handler.postDelayed(updateThread, 100);
 		}
 	};
@@ -232,7 +229,6 @@ public class MainActivity extends FragmentActivity {
 			View view = inflater.inflate(R.layout.fragment_main, null);
 
 			MainFragment_initail(view);
-			setMainState(0);
 
 			// 播放條監聽
 			songTimeBar
@@ -274,10 +270,11 @@ public class MainActivity extends FragmentActivity {
 			imgBtn_play.setOnClickListener(btnMusicListener);
 			imgBtn_next.setOnClickListener(btnMusicListener);
 			imgBtn_pre.setOnClickListener(btnMusicListener);
-			/* 設置頁面歌曲 */
-			playList.add(0, globalVariable.getMusic(0));
+			/* 設置頁面歌曲 */			
+			globalVariable.addIntoPlayList(globalVariable.getMusic(0));
+			setMainState();
 			songTimeBar.setEnabled(false);
-			songTimeBar.setMax((int) playList.get(0).getDuration());
+			
 
 			
 		}
@@ -289,7 +286,6 @@ public class MainActivity extends FragmentActivity {
 				switch (v.getId()) {
 				// 播放暫停鍵
 				case R.id.imgBtn_play: {
-					setMainState(globalVariable.getMusicCursor());
 					callServicePlay(getActivity());
 					break;
 				}
@@ -337,7 +333,7 @@ public class MainActivity extends FragmentActivity {
 
 			// 使用自定Adapter顯示歌曲清單
 			mlistView = (ListView) view.findViewById(R.id.musiclist);
-			mAdapter = new MusicAdapter(globalVariable.getMainActivity(), playList);
+			mAdapter = new MusicAdapter(globalVariable.getMainActivity(), globalVariable.getPlayList());
 			mlistView.setAdapter(mAdapter);
 
 			// 下拉式清單
@@ -396,14 +392,11 @@ public class MainActivity extends FragmentActivity {
 							musicInfo = globalVariable.getMusic(position);
 
 							// 設置main Fragment 狀態與外觀
-							playList.clear();
-							playList.add(0, musicInfo);
-							imgBtn_play
-									.setImageResource(R.drawable.player_pause);
+							globalVariable.clearPlayList();
+							globalVariable.addIntoPlayList(musicInfo);
 							globalVariable.setIsPlaying(true);
-							songTimeBar.setMax((int) playList.get(0)
-									.getDuration());
-							setMainState(0);
+							songTimeBar.setMax((int) globalVariable
+									.getPlayingNow().getDuration());
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
 							callServicePlay(getActivity());
@@ -434,18 +427,15 @@ public class MainActivity extends FragmentActivity {
 								musicInfo = selectList.get(position);
 								globalVariable.setMusicCursor(position);
 								// 設置播放清單
-								playList.clear();
+								globalVariable.clearPlayList();
 								for (int listPointer = 0; listPointer < selectList
 										.size(); listPointer++) {
 									musicInfo = selectList.get(listPointer);
-									playList.add(musicInfo);
+									globalVariable.addIntoPlayList(musicInfo);
 
 								}
 								// 設置main Fragment 狀態與外觀
-								imgBtn_play
-										.setImageResource(R.drawable.player_pause);
-								songTimeBar.setMax((int) playList.get(position)
-										.getDuration());
+								songTimeBar.setMax((int) globalVariable.getPlayingNow().getDuration());
 								((MainActivity) getActivity()).getViewPager()
 										.setCurrentItem(1);
 								callServicePlay(getActivity());
@@ -473,12 +463,8 @@ public class MainActivity extends FragmentActivity {
 							} else { // 展開的情況下 將選到的歌手裡的所有歌存到selectList
 								musicInfo = selectList.get(position);
 								// 設置main Fragment 狀態與外觀
-								playList.clear();
-								playList.add(0, musicInfo);
-								imgBtn_play
-										.setImageResource(R.drawable.player_pause);
-								songTimeBar.setMax((int) playList.get(0)
-										.getDuration());
+								globalVariable.clearPlayList();
+								globalVariable.addIntoPlayList(musicInfo);
 								((MainActivity) getActivity()).getViewPager()
 										.setCurrentItem(1);
 								callServicePlay(getActivity());
@@ -488,13 +474,11 @@ public class MainActivity extends FragmentActivity {
 						} else if (spnPosition == findList) { // 根據搜尋排列時
 							musicInfo = selectList.get(position);
 							// 設置main Fragment 狀態與外觀
-							playList.clear();
-							playList.add(0, musicInfo);
-							imgBtn_play
-									.setImageResource(R.drawable.player_pause);
-							songTimeBar.setMax((int) playList.get(0)
-									.getDuration());
-							setMainState(0);
+							globalVariable.clearPlayList();
+							globalVariable.addIntoPlayList(musicInfo);
+							songTimeBar.setMax((int) globalVariable.getPlayingNow().getDuration());
+							((MainActivity) getActivity()).getViewPager()
+									.setCurrentItem(1);
 							((MainActivity) getActivity()).getViewPager()
 									.setCurrentItem(1);
 							callServicePlay(getActivity());
@@ -517,7 +501,7 @@ public class MainActivity extends FragmentActivity {
 				case R.id.action_add:
 					for (countA = 0; countA < tempList.size(); countA++) {
 						tempList.get(countA).setBackground(false);
-						playList.add(tempList.get(countA));
+						globalVariable.addIntoPlayList(tempList.get(countA));
 					}
 					tempList.clear();
 					mode.finish();
@@ -525,7 +509,7 @@ public class MainActivity extends FragmentActivity {
 				case R.id.action_del:
 					for (countA = 0; countA < deleteList.size(); countA++) {
 						deleteList.get(countA).setBackground(false);
-						playList.remove(deleteList.get(countA));
+						globalVariable.removeSongPlaylist(deleteList.get(countA));
 					}
 					deleteList.clear();
 					mode.finish();
@@ -548,7 +532,7 @@ public class MainActivity extends FragmentActivity {
 					} else if (spnPosition == showPlaylist) {
 						for (countA = 0; countA < playList.size(); countA++) {
 							deleteList.add(playList.get(countA));
-							playList.get(countA).setBackground(true);
+							globalVariable.getPlayList().get(countA).setBackground(true);
 						}
 						mAdapter.notifyDataSetChanged();
 					} else if (spnPosition == findList) {
@@ -571,8 +555,8 @@ public class MainActivity extends FragmentActivity {
 						}
 						selectAdapter.notifyDataSetChanged();
 					} else if (spnPosition == showPlaylist) {
-						for (countA = 0; countA < playList.size(); countA++) {
-							playList.get(countA).setBackground(false);
+						for (countA = 0; countA < globalVariable.getPlayListSize(); countA++) {
+							globalVariable.getPlayList().get(countA).setBackground(false);
 						}
 						mAdapter.notifyDataSetChanged();
 					} else if (spnPosition == findList) {
@@ -621,8 +605,8 @@ public class MainActivity extends FragmentActivity {
 					}
 					selectAdapter.notifyDataSetChanged();
 				} else if (spnPosition == showPlaylist) {
-					for (countA = 0; countA < playList.size(); countA++) {
-						playList.get(countA).setBackground(false);
+					for (countA = 0; countA < globalVariable.getPlayListSize(); countA++) {
+						globalVariable.getPlayList().get(countA).setBackground(false);
 					}
 					mAdapter.notifyDataSetChanged();
 				} else if (spnPosition == findList) {
@@ -659,8 +643,8 @@ public class MainActivity extends FragmentActivity {
 						selectList.get(position).setBackground(checked);
 						selectAdapter.notifyDataSetChanged();
 					} else if (spnPosition == showPlaylist) {
-						deleteList.add(playList.get(position));
-						playList.get(position).setBackground(checked);
+						deleteList.add(globalVariable.getPlayList().get(position));
+						globalVariable.getPlayList().get(position).setBackground(checked);
 						mAdapter.notifyDataSetChanged();
 					} else if (spnPosition == findList) {
 						tempList.add(selectList.get(position));
@@ -677,8 +661,8 @@ public class MainActivity extends FragmentActivity {
 						selectList.get(position).setBackground(checked);
 						selectAdapter.notifyDataSetChanged();
 					} else if (spnPosition == showPlaylist) {
-						deleteList.remove(playList.get(position));
-						playList.get(position).setBackground(checked);
+						deleteList.remove(globalVariable.getPlayList().get(position));
+						globalVariable.getPlayList().get(position).setBackground(checked);
 						mAdapter.notifyDataSetChanged();
 					} else if (spnPosition == findList) {
 						tempList.remove(selectList.get(position));
@@ -705,7 +689,7 @@ public class MainActivity extends FragmentActivity {
 				break;
 			case 2:
 				for (countA = 0; countA < tempList.size(); countA++) {
-					playList.add(tempList.get(countA));
+					globalVariable.addIntoPlayList(tempList.get(countA));
 				}
 				tempList.clear();
 				break;
@@ -727,7 +711,7 @@ public class MainActivity extends FragmentActivity {
 				switch (position) {
 				case showPlaylist:
 					mAdapter = new MusicAdapter(
-							globalVariable.getMainActivity(), playList);
+							globalVariable.getMainActivity(), globalVariable.getPlayList());
 					mlistView.setAdapter(mAdapter);
 					isExpand = false;
 					break;
@@ -764,11 +748,15 @@ public class MainActivity extends FragmentActivity {
 		Handler handler = new Handler();
 		Runnable updateThread = new Runnable() {
 			public void run() {
+				MusicDatabase musicDatabase = new MusicDatabase();
 				// 獲得歌曲現在播放位置並設置成播放進度條的值
 				songTimeBar.setProgress(MusicService.mediaPlayer
 						.getCurrentPosition());
 				// 獲得播放時間並更改text view
 				globalVariable.setMusicTempTime(MusicService.mediaPlayer.getCurrentPosition());
+				songTime.setText(musicDatabase
+						.formatTime((long) MusicService.mediaPlayer
+								.getCurrentPosition()));
 				handler.postDelayed(updateThread, 100);
 			}
 		};
@@ -1371,8 +1359,8 @@ public class MainActivity extends FragmentActivity {
 					tempTime = tempTime
 							+ globalVariable.getMusic(randomTemp).getDuration();
 					// 加入播放清單
-					playList.clear();
-					playList.add(globalVariable.getMusic(randomTemp));
+					globalVariable.clearPlayList();
+					globalVariable.addIntoPlayList(globalVariable.getMusic(randomTemp));
 					callServicePlay(getActivity());
 					Log.d("randomSuite", Long.toString(randomTemp));
 				} else {
@@ -1416,7 +1404,7 @@ public class MainActivity extends FragmentActivity {
 	public void playMusicGUI(boolean isPlaying) {
 		if (isPlaying) {
 			imgBtn_play.setImageResource(R.drawable.player_pause);
-			setMainState(globalVariable.getMusicCursor());
+			setMainState();
 			handler.post(updateThread);
 			songTimeBar.setEnabled(true);
 		} else {
@@ -1437,11 +1425,12 @@ public class MainActivity extends FragmentActivity {
 
 	// 設置Main元件狀態
 	@SuppressWarnings("deprecation")
-	public void setMainState(int musicCursor) {
+	public void setMainState() {
 		songTitle.setText(globalVariable.getPlayingNow().getTitle());
 		songArtist.setText(globalVariable.getPlayingNow().getArtist());
 		songAlbum.setText(globalVariable.getPlayingNow().getAlbum());
 		songTime.setText(globalVariable.getPlayingNow().getTime());
+		songTimeBar.setMax((int) globalVariable.getPlayingNow().getDuration());
 		background = new BitmapDrawable(globalVariable.getPlayingNow()
 				.getCoverData());
 		vLayout.setBackground(background);
@@ -1452,9 +1441,9 @@ public class MainActivity extends FragmentActivity {
 	public void addBtnClicked(int position) {
 		Log.d("click", "MainActivity" + Integer.toString(position));
 		if (spnPosition == sortWithName) {
-			playList.add(globalVariable.getMusic(position));
+			globalVariable.addIntoPlayList(globalVariable.getMusic(position));
 		} else {				
-			playList.add(selectList.get(position));
+			globalVariable.addIntoPlayList(selectList.get(position));
 		}
 			Toast.makeText(getApplicationContext(), "已加入播放清單", Toast.LENGTH_SHORT).show();
 	}

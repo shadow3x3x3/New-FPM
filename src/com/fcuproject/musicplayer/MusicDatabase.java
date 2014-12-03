@@ -6,12 +6,14 @@ import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.ContentUris;
+import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.util.Log;
 
 /**
  * Created by Administrator on 2014/7/4.
@@ -20,54 +22,50 @@ public class MusicDatabase {
 	private ArrayList<MusicInfo> musicInfos;
 	private static final Uri albumCoverUri = Uri
 			.parse("content://media/external/audio/albumart");
-	
+
 	public MusicDatabase() {
 		musicInfos = new ArrayList<MusicInfo>();
 	}
 
 	// 取得音樂檔案資訊
-	public ArrayList<MusicInfo> readMusic(final Activity mainActivity)
+	public ArrayList<MusicInfo> readMusic(Context context)
 			throws FileNotFoundException {
-		new Thread() {
-			public void run() {
-				int index = 0;
-				/* 解析音樂檔 */
-				Cursor musicCursor = mainActivity.getContentResolver().query(
-						MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-						new String[] { MediaStore.Audio.Media.TITLE, 		// 取得音樂檔名稱
-								       MediaStore.Audio.Media.ARTIST, 		// 取得演出者
-								       MediaStore.Audio.Media.TRACK, 		// 取得音樂音軌
-								       MediaStore.Audio.Media.ALBUM, 		// 取得專輯名稱
-								       MediaStore.Audio.Media.ALBUM_ID, 	// 取得專輯ID
-								       MediaStore.Audio.Media._ID, 			// 取得音樂id
-								       MediaStore.Audio.Media.DATA, 		// 取得音樂路徑
-								       MediaStore.Audio.Media.DURATION, 	// 取得音樂檔長度
-								       MediaStore.Audio.Media.DISPLAY_NAME, // 取得表示名稱
-						}, null, null, null);
+		int index = 0;
+		/* 解析音樂檔 */
+		Cursor musicCursor = context.getContentResolver().query(
+				MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+				new String[] { MediaStore.Audio.Media.TITLE, // 取得音樂檔名稱
+						MediaStore.Audio.Media.ARTIST, // 取得演出者
+						MediaStore.Audio.Media.TRACK, // 取得音樂音軌
+						MediaStore.Audio.Media.ALBUM, // 取得專輯名稱
+						MediaStore.Audio.Media.ALBUM_ID, // 取得專輯ID
+						MediaStore.Audio.Media._ID, // 取得音樂id
+						MediaStore.Audio.Media.DATA, // 取得音樂路徑
+						MediaStore.Audio.Media.DURATION, // 取得音樂檔長度
+						MediaStore.Audio.Media.DISPLAY_NAME, // 取得表示名稱
+				}, null, null, null);
 
-				// 移動指標
-				musicCursor.moveToFirst();
-				// 讀取每一個音樂檔
-				while (musicCursor.moveToNext()) {
-					// 放入MusicInfo
-					MusicInfo temp = new MusicInfo();
-					temp.setTitle		(musicCursor.getString(0));
-					temp.setArtist		(musicCursor.getString(1));
-					temp.setTrack		(musicCursor.getInt(2));
-					temp.setAlbum		(musicCursor.getString(3));
-					temp.setAlbumID		(musicCursor.getLong(4));
-					temp.setId			(musicCursor.getInt(5));
-					temp.setPath		(musicCursor.getString(6));
-					temp.setDuration	(musicCursor.getLong(7));
-					temp.setTime		(formatTime(musicCursor.getLong(7)));
-					temp.setCoverData	(getAlbumCover(temp.getAlbumID(), mainActivity));
-					musicInfos.add(index, temp);
-					index++;
-				}
-				musicCursor.close();
-			}
-		}.start();
-		
+		// 移動指標
+		musicCursor.moveToFirst();
+		// 讀取每一個音樂檔
+		while (musicCursor.moveToNext()) {
+			// 放入MusicInfo
+			MusicInfo temp = new MusicInfo();
+			temp.setTitle(musicCursor.getString(0));
+			temp.setArtist(musicCursor.getString(1));
+			temp.setTrack(musicCursor.getInt(2));
+			temp.setAlbum(musicCursor.getString(3));
+			temp.setAlbumID(musicCursor.getLong(4));
+			temp.setId(musicCursor.getInt(5));
+			temp.setPath(musicCursor.getString(6));
+			temp.setDuration(musicCursor.getLong(7));
+			temp.setTime(formatTime(musicCursor.getLong(7)));
+			temp.setCoverData(getAlbumCover(temp.getAlbumID(), context));
+			musicInfos.add(index, temp);
+			index++;
+		}
+		musicCursor.close();
+
 		return musicInfos;
 	}// readMusic end
 
@@ -93,7 +91,7 @@ public class MusicDatabase {
 	}
 
 	// 藉由專輯id 找尋 專輯封面
-	public Bitmap getAlbumCover(long albumID, Activity mainActivity) {
+	public Bitmap getAlbumCover(long albumID, Context context) {
 		/* 定義區域變數 */
 		Bitmap bm = null;
 		FileDescriptor fd = null;
@@ -103,7 +101,7 @@ public class MusicDatabase {
 		// 讀取專輯封面
 		try {
 			BitmapFactory.Options options = new BitmapFactory.Options();
-			ParcelFileDescriptor pfd = mainActivity.getContentResolver()
+			ParcelFileDescriptor pfd = context.getContentResolver()
 					.openFileDescriptor(uri, "r");
 			if (pfd != null) {
 				fd = pfd.getFileDescriptor();

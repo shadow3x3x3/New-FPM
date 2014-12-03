@@ -28,7 +28,6 @@ public class MusicService extends Service {
 	public static MediaPlayer mediaPlayer;
 	/* 宣告類別物件 */
 	private MusicDatabase mDatabase;
-	private ArrayList<MusicInfo> allMusicList;
 	private String PATH;
 	private Notification notification;
 	private NotificationManager notificationManager;
@@ -42,13 +41,15 @@ public class MusicService extends Service {
 
 	@Override
 	public void onCreate() {
-		globalVariable = (GlobalVariable) getApplicationContext();
-		mediaPlayer = new MediaPlayer();
+		
 		
 	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
+		globalVariable = (GlobalVariable) getApplicationContext();
+		mediaPlayer = new MediaPlayer();
+		
 		// 媒體方法
 		if (intent != null) {
 			musicState = intent.getIntExtra("MusicState", GlobalVariable.PLAY);
@@ -84,8 +85,7 @@ public class MusicService extends Service {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
-		Log.d("Service", allMusicList.get(0).getTitle());
+		//globalVariable.addIntoPlayList(globalVariable.getMusic(0));
 	}
 
 	// 判斷播放及暫停
@@ -94,7 +94,7 @@ public class MusicService extends Service {
 		if (globalVariable.getPlayState().equals("FirstTimePlay")) {
 			// music list 是否還有歌曲
 			if (globalVariable.getMusicCursor() <= globalVariable
-					.getMusicListSize()) {
+					.getPlayListSize()) {
 				play(0);
 				globalVariable.setIsPlaying(true);
 			} else {
@@ -103,15 +103,19 @@ public class MusicService extends Service {
 			}
 			// 正在播放 執行暫停動作
 		} else if (globalVariable.getPlayState().equals("PlayingNow")) {
-			pause();
-			globalVariable.setMusicTempTime(MusicService.mediaPlayer
+			Log.d("service", "PlayingNow");			
+			globalVariable.setMusicTempTime(mediaPlayer
 					.getCurrentPosition());
 			globalVariable.setIsPlaying(false);
 			globalVariable.setIsPause(true);
+			pause();
 			// 正在暫停 執行播放動作
 		} else if (globalVariable.getPlayState().equals("PauseNow")) {
+			Log.d("service", "PauseNow");
 			mediaPlayer.seekTo(globalVariable.getMusicTempTime());
 			mediaPlayer.start();
+			intent = new Intent("playMusic");
+			sendBroadcast(intent);
 			globalVariable.setIsPlaying(true);
 			globalVariable.setIsPause(false);
 		}
@@ -119,6 +123,7 @@ public class MusicService extends Service {
 
 	// 播放方法
 	private void play(int position) {
+		Log.d("service", "play");
 		// 得到音樂檔路徑
 		PATH = globalVariable.getPlayingNow().getPath();
 		Intent intentBroadcast = new Intent();
@@ -131,7 +136,7 @@ public class MusicService extends Service {
 		try {
 			mediaPlayer.reset();
 			mediaPlayer.setDataSource(PATH);
-			mediaPlayer.prepare();
+			mediaPlayer.prepareAsync();
 			mediaPlayer.setOnPreparedListener(new PreparedListener(position));
 			
 			// 播放完監聽
@@ -142,8 +147,8 @@ public class MusicService extends Service {
 					if (globalVariable.isLastOne()) { // 最後一首的情形
 						intent = new Intent("theLastSong");
 						sendBroadcast(intent);
-						Toast.makeText(getApplicationContext(), "已經沒有下一首了",
-								1000).show();
+						Toast.makeText(getApplicationContext(), "已經沒有下一首了"
+								, 1000).show();
 					} else { // 還沒到最後一首
 						nextSong();
 					}
@@ -161,13 +166,15 @@ public class MusicService extends Service {
 		// 發送廣播
 		intent = new Intent("pauseMusic");
 		sendBroadcast(intent);
-		mediaPlayer.pause();
 		musicState = GlobalVariable.PAUSE;
+		mediaPlayer.pause();
+		
 
 	}
 
 	// 上一首方法
 	private void preSong() {
+		Log.d("service", "preSong");
 		if (globalVariable.getMusicCursor() > 0) { // 還沒到第一首
 			globalVariable.minusMusicCursor();
 			intent = new Intent("playPreSong");
@@ -182,11 +189,15 @@ public class MusicService extends Service {
 
 	// 下一首方法
 	private void nextSong() {
-		if (globalVariable.getMusicCursor() < globalVariable.getMusicListSize() - 1) { // 還沒到最後一首
+		Log.d("service", "nextSong");
+		if (globalVariable.getMusicCursor() < globalVariable.getPlayListSize() - 1) { // 還沒到最後一首
+			Log.d("service", "nextSongOK");
 			globalVariable.addMusicCursor();
 			intent = new Intent("playNextSong");
 			sendBroadcast(intent);
+			play(0);
 		} else {
+			Log.d("service", "nextSongNOPE");
 			Toast.makeText(getApplicationContext(), "沒有下一首", Toast.LENGTH_SHORT)
 					.show();
 		}
