@@ -93,11 +93,18 @@ public class MainActivity extends FragmentActivity {
 		// 設置窗口無標題
 		Log.d("Activity", "onCreate");
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		super.onCreate(savedInstanceState);
+		
+		playList 	= new ArrayList<MusicInfo>();
+		albumList 	= new ArrayList<MusicInfo>();
+		artistList 	= new ArrayList<MusicInfo>();
+		selectList 	= new ArrayList<MusicInfo>();
+		tempList 	= new ArrayList<MusicInfo>();
+		deleteList 	= new ArrayList<MusicInfo>();
+		
 		globalVariable = (GlobalVariable) getApplicationContext();
 		globalVariable.setMainActivity(this);
-//		Intent startIntent = new Intent(this, MusicService.class);
-//		startIntent.putExtra("MusicState", GlobalVariable.SCAN);
-//		startService(startIntent);
+
 		MusicDatabase musicDatabase = new MusicDatabase();
 		try {
 			playList = musicDatabase.readMusic(this);
@@ -105,23 +112,15 @@ public class MainActivity extends FragmentActivity {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		globalVariable.setAllMusicList(playList);
-		
-		
+		globalVariable.setAllMusicList(playList);		
 		globalVariable.addIntoPlayList(globalVariable.getMusic(0));
+		playList 	= globalVariable.getPlayList();
 
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
 		
+		setContentView(R.layout.activity_main);		
 		viewPager_initial();
 
-		playList 	= globalVariable.getPlayList();
-		albumList 	= new ArrayList<MusicInfo>();
-		artistList 	= new ArrayList<MusicInfo>();
-		selectList 	= new ArrayList<MusicInfo>();
-		tempList 	= new ArrayList<MusicInfo>();
-		deleteList 	= new ArrayList<MusicInfo>();
-
+		
 	}
 
 	// Activity被強制關閉時結束通知
@@ -1460,12 +1459,12 @@ public class MainActivity extends FragmentActivity {
 	}
 	
 	// 得到目前是否能加入清單
-		public Boolean canAdd() {
-			if (spnPosition == showPlaylist) {
-				return false;
-			} else {
+	public Boolean canAdd() {
+		if (spnPosition == showPlaylist) {
+			return false;
+		} else {
 				return true;
-			}
 		}
+	}
 
 } // Activity End

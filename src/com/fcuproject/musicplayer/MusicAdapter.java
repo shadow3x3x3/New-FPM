@@ -26,7 +26,6 @@ public class MusicAdapter extends BaseAdapter {
 		this.musicInfos = musicInfos;
 	}
 
-
 	@Override
 	public int getCount() {
 

@@ -10,8 +10,8 @@ public class GlobalVariable extends Application {
 	private MainActivity mainActivity;
 
 	/* 歌曲序列 */
-	private ArrayList<MusicInfo> allMusicList;
-	private ArrayList<MusicInfo> playList;
+	private ArrayList<MusicInfo> allMusicList	= new ArrayList<MusicInfo>();;
+	private ArrayList<MusicInfo> playList 		= new ArrayList<MusicInfo>();;
 
 	/* 指標 */
 	private int musicCursor 	= 0;

@@ -15,7 +15,6 @@
     <permission android:name="com.fcuproject.musicplayer.MusicService" >
     </permission>
 
-    <uses-permission android:name="com.fcuproject.musicplayer.MusicService" />
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -39,9 +38,7 @@
         </activity>
 
         <service
-            
-            android:name="com.fcuproject.service.MusicService"
-            android:exported="false" >
+            android:name="com.fcuproject.service.MusicService">
             <intent-filter>
                 <action android:name="playNextSong" />
                 <action android:name="playPreSong" />

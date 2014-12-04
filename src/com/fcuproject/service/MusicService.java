@@ -24,7 +24,6 @@ import com.fcuproject.musicplayer.R;
 public class MusicService extends Service {
 	/* 引入全域變數 */
 	GlobalVariable globalVariable;
-
 	public static MediaPlayer mediaPlayer;
 	/* 宣告類別物件 */
 	private MusicDatabase mDatabase;
@@ -44,7 +43,6 @@ public class MusicService extends Service {
 	public void onCreate() {
 		globalVariable = (GlobalVariable) getApplicationContext();
 		mediaPlayer = new MediaPlayer();
-		
 	}
 
 	@Override
@@ -89,7 +87,7 @@ public class MusicService extends Service {
 	}
 
 	// 判斷播放及暫停
-	public void playAction() {
+	private void playAction() {
 		// 第一次播放
 		if (globalVariable.getPlayState().equals("FirstTimePlay")) {
 			// music list 是否還有歌曲
@@ -216,7 +214,7 @@ public class MusicService extends Service {
 	}
 
 	// 發送通知
-	public void sendNotification(GlobalVariable globalVariable) {
+	private void sendNotification(GlobalVariable globalVariable) {
 		// 獲取對象
 		MusicInfo musicInfo = globalVariable.getPlayingNow();
 		notificationManager = (NotificationManager) this
