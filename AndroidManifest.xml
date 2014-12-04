@@ -37,8 +37,14 @@
             </intent-filter>
         </activity>
 
+<<<<<<< HEAD
         <service
             android:name="com.fcuproject.service.MusicService">
+=======
+        <service          
+            android:name="com.fcuproject.service.MusicService"
+            android:exported="false" >
+>>>>>>> 6bcbec6a006f4a936eff855ddda877f4c7a5eb89
             <intent-filter>
                 <action android:name="playNextSong" />
                 <action android:name="playPreSong" />

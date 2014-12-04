@@ -18,6 +18,7 @@ public class WidgetPlayer extends AppWidgetProvider{
 	@Override
 	public void onUpdate(Context context, AppWidgetManager appWidgetManager,
 			int[] appWidgetIds) {
+		globalVariable = (GlobalVariable) context.getApplicationContext();
 		Log.d("Widget", "onUpdate Start");
 		Intent intent = new Intent(context, MainActivity.class);
 		intent.setAction(Intent.ACTION_MAIN);
@@ -53,6 +54,7 @@ public class WidgetPlayer extends AppWidgetProvider{
 
 	private void updateWidget(Context context) {
 		Log.d("Widget", "updateWidget Start");
+		globalVariable = (GlobalVariable) context.getApplicationContext();
 		RemoteViews widgetViews = new RemoteViews(context.getPackageName(),
 				R.layout.player_widget);
 		musicInfo = globalVariable.getPlayingNow();

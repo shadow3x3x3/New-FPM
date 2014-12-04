@@ -10,8 +10,13 @@ public class GlobalVariable extends Application {
 	private MainActivity mainActivity;
 
 	/* 歌曲序列 */
+<<<<<<< HEAD
 	private ArrayList<MusicInfo> allMusicList	= new ArrayList<MusicInfo>();;
 	private ArrayList<MusicInfo> playList 		= new ArrayList<MusicInfo>();;
+=======
+	private ArrayList<MusicInfo> allMusicList = new ArrayList<MusicInfo>();
+	private ArrayList<MusicInfo> playList = new ArrayList<MusicInfo>();
+>>>>>>> 6bcbec6a006f4a936eff855ddda877f4c7a5eb89
 
 	/* 指標 */
 	private int musicCursor 	= 0;
@@ -77,9 +82,9 @@ public class GlobalVariable extends Application {
 	public String getPlayState(){
 		if (isPlaying == false && isPause == false ) {
 			return "FirstTimePlay";
-		} else if (isPlaying) {
+		} else if (isPlaying == true) {
 			return "PlayingNow";
-		} else if (isPause) {
+		} else if (isPause == true) {
 			return "PauseNow";
 		}
 		
@@ -120,6 +125,10 @@ public class GlobalVariable extends Application {
 	/* method */
 	public void addIntoPlayList(MusicInfo musicInfo) {
 		playList.add(musicInfo);
+	}
+	
+	public void removeSongPlaylist(MusicInfo musicInfo){
+		playList.remove(musicInfo);
 	}
 	
 	public void clearPlayList() {
